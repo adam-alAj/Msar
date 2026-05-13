@@ -6,6 +6,7 @@ import '../models/vote.dart';
 import '../providers/governorate_provider.dart';
 import '../services/checkpoint_service.dart';
 import '../services/auth_service.dart';
+import '../services/haptic_service.dart';
 import '../utils/constants.dart';
 
 class VoteScreen extends StatefulWidget {
@@ -120,7 +121,7 @@ class _VoteScreenState extends State<VoteScreen> {
               subtitle: 'من الطريق الخارجة دخولا بالمنطقة',
               icon: Icons.arrow_forward,
               selectedStatus: _entranceStatus,
-              onStatusSelected: (s) => setState(() { _entranceStatus = s; _hasVotedOnce = true; }),
+              onStatusSelected: (s) { HapticService.voteSelected(context, s); setState(() { _entranceStatus = s; _hasVotedOnce = true; }); },
             ),
             const SizedBox(height: 16),
 
@@ -130,7 +131,7 @@ class _VoteScreenState extends State<VoteScreen> {
               subtitle: 'خارج من المنطقة باتجاه شارع رئيسي أو خط سريع',
               icon: Icons.arrow_back,
               selectedStatus: _exitStatus,
-              onStatusSelected: (s) => setState(() { _exitStatus = s; _hasVotedOnce = true; }),
+              onStatusSelected: (s) { HapticService.voteSelected(context, s); setState(() { _exitStatus = s; _hasVotedOnce = true; }); },
             ),
             const SizedBox(height: 24),
 
@@ -301,6 +302,7 @@ class _VoteScreenState extends State<VoteScreen> {
 
       await Future.wait(votes);
       if (mounted) {
+        HapticService.voteConfirmed(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('✓ تم تسجيل تصويتك بنجاح! شكراً لمشاركتك'))]), backgroundColor: Colors.green.shade700, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
         Navigator.pop(context, true);
       }
