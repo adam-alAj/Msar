@@ -21,49 +21,65 @@ class SettingsScreen extends StatelessWidget {
         children: [
           Text(
             'المظهر',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.primary,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colorScheme.primary),
           ),
           const SizedBox(height: 12),
-          SegmentedButton<ThemeMode>(
+          SegmentedButton<AppThemeMode>(
             segments: const [
               ButtonSegment(
-                value: ThemeMode.system,
-                icon: Icon(Icons.brightness_auto),
-                label: Text('تلقائي'),
+                value: AppThemeMode.autoSolar,
+                icon: Icon(Icons.wb_twilight),
+                label: Text('شمسي'),
               ),
               ButtonSegment(
-                value: ThemeMode.light,
+                value: AppThemeMode.system,
+                icon: Icon(Icons.brightness_auto),
+                label: Text('نظام'),
+              ),
+              ButtonSegment(
+                value: AppThemeMode.light,
                 icon: Icon(Icons.light_mode),
                 label: Text('فاتح'),
               ),
               ButtonSegment(
-                value: ThemeMode.dark,
+                value: AppThemeMode.dark,
                 icon: Icon(Icons.dark_mode),
                 label: Text('داكن'),
               ),
             ],
-            selected: {themeProvider.themeMode},
+            selected: {themeProvider.mode},
             onSelectionChanged: (modes) {
-              themeProvider.setThemeMode(modes.first);
+              themeProvider.setMode(modes.first);
             },
           ),
           const SizedBox(height: 8),
-          Text(
-            'عند اختيار "تلقائي"، يتبع التطبيق إعدادات النظام.',
-            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
-          ),
+          if (themeProvider.mode == AppThemeMode.autoSolar && themeProvider.sunset != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  Icon(Icons.wb_sunny_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Text(
+                    'الشروق ${_formatTime(themeProvider.sunrise)} — الغروب ${_formatTime(themeProvider.sunset)}',
+                    style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            )
+          else
+            Text(
+              themeProvider.mode == AppThemeMode.autoSolar
+                  ? 'يتبع التطبيق وقت الشروق والغروب تلقائياً'
+                  : themeProvider.mode == AppThemeMode.system
+                      ? 'يتبع التطبيق إعدادات النظام'
+                      : '',
+              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+            ),
           const SizedBox(height: 24),
           Text(
             'ذاكرة الخريطة المؤقتة',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.primary,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colorScheme.primary),
           ),
           const SizedBox(height: 8),
           Text(
@@ -86,5 +102,14 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatTime(DateTime? time) {
+    if (time == null) return '--:--';
+    final h = time.hour;
+    final m = time.minute.toString().padLeft(2, '0');
+    final period = h >= 12 ? 'م' : 'ص';
+    final hour12 = h > 12 ? h - 12 : (h == 0 ? 12 : h);
+    return '$hour12:$m $period';
   }
 }
