@@ -7,6 +7,7 @@ import '../services/location_service.dart';
 import '../services/auth_service.dart';
 import '../utils/localization.dart';
 import '../widgets/direction_status_card.dart';
+import '../widgets/skeleton_loaders.dart';
 import 'vote_screen.dart';
 
 class CheckpointDetailScreen extends StatefulWidget {
@@ -111,7 +112,7 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
   }
 
   Widget _buildLoadingState() {
-    return const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator(), SizedBox(height: 16), Text('جاري تحميل البيانات...')]));
+    return const CheckpointDetailSkeleton();
   }
 
   Widget _buildErrorState(Object? error, ColorScheme colorScheme) {

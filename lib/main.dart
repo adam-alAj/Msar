@@ -11,6 +11,7 @@ import 'utils/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
 import 'services/auth_service.dart';
+import 'widgets/skeleton_loaders.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,18 +65,7 @@ class MyApp extends StatelessWidget {
         stream: AuthService().authStateChanges,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('جاري التحقق من حالة الدخول...'),
-                  ],
-                ),
-              ),
-            );
+            return const SplashSkeleton();
           }
 
           if (snapshot.hasData) {

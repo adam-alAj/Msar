@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../widgets/skeleton_loaders.dart';
 import 'map_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -221,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: BoxDecoration(color: colorScheme.primary, borderRadius: BorderRadius.circular(14)),
                         child: Center(
                           child: _loading
-                              ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                              ? SkeletonShimmer(child: Container(height: 20, width: 100, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(10))))
                               : Text('إرسال رمز التحقق', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colorScheme.onPrimary)),
                         ),
                       ),
@@ -230,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (_otpSent)
                     Column(
                       children: [
-                        if (_loading) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: CircularProgressIndicator(color: colorScheme.primary, strokeWidth: 2)),
+                        if (_loading) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: SkeletonShimmer(child: SkeletonBone(width: 140, height: 14))),
                         TextButton(
                           onPressed: () => setState(() { _otpSent = false; _verificationId = null; for (final c in _otpControllers) c.clear(); _error = null; }),
                           child: Text('تغيير رقم الهاتف', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),

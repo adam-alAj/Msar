@@ -8,6 +8,7 @@ import '../services/checkpoint_service.dart';
 import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../utils/constants.dart';
+import '../widgets/skeleton_loaders.dart';
 
 class VoteScreen extends StatefulWidget {
   final Checkpoint checkpoint;
@@ -187,7 +188,7 @@ class _VoteScreenState extends State<VoteScreen> {
                   disabledBackgroundColor: colorScheme.onSurface.withOpacity(0.12),
                 ),
                 child: _isSubmitting
-                    ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation(colorScheme.onPrimary)))
+                    ? SkeletonShimmer(child: Container(height: 22, width: 120, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(11))))
                     : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                         const Icon(Icons.send_rounded, size: 22),
                         const SizedBox(width: 12),

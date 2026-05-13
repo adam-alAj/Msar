@@ -21,6 +21,7 @@ import '../widgets/checkpoint_marker.dart';
 import '../widgets/checkpoint_card.dart';
 import '../widgets/freshness_indicator.dart';
 import '../widgets/map_legend.dart';
+import '../widgets/skeleton_loaders.dart';
 import '../widgets/location_permission_sheet.dart';
 import 'checkpoint_detail_screen.dart';
 import 'login_screen.dart';
@@ -359,13 +360,16 @@ class _MapScreenState extends State<MapScreen>
               _buildModernAppBar(colorScheme, isDark),
               _buildTabBar(colorScheme, isDark),
               Expanded(
-                child: _isLoading
-                    ? _buildLoadingState(colorScheme)
-                    : _errorMessage != null && _filteredCheckpoints.isEmpty
-                        ? _buildErrorState(colorScheme)
-                        : _selectedTabIndex == 0
-                            ? _buildMapView(isDark)
-                            : _buildListView(),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: _isLoading
+                      ? _buildLoadingState(colorScheme)
+                      : _errorMessage != null && _filteredCheckpoints.isEmpty
+                          ? _buildErrorState(colorScheme)
+                          : _selectedTabIndex == 0
+                              ? _buildMapView(isDark)
+                              : _buildListView(),
+                ),
               ),
             ],
           ),
@@ -595,19 +599,9 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Widget _buildLoadingState(ColorScheme colorScheme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 50, height: 50,
-            child: CircularProgressIndicator(strokeWidth: 3, valueColor: AlwaysStoppedAnimation(colorScheme.primary)),
-          ),
-          const SizedBox(height: 16),
-          Text('جاري تحميل البيانات...', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-        ],
-      ),
-    );
+    return _selectedTabIndex == 0
+        ? const MapSkeleton()
+        : const CheckpointListSkeleton();
   }
 
   Widget _buildErrorState(ColorScheme colorScheme) {
