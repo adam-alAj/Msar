@@ -166,7 +166,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _startAutoRefresh() {
     _autoRefreshTimer?.cancel();
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) => _onAutoRefreshTick());
+    _autoRefreshTimer = Timer.periodic(const Duration(minutes: 5), (_) => _onAutoRefreshTick());
   }
 
   void _onAutoRefreshTick() {
