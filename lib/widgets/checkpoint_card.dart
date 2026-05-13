@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/checkpoint.dart';
 import '../models/checkpoint_status.dart';
 import '../utils/constants.dart';
+import '../utils/neu_glass.dart';
 
 class CheckpointCard extends StatelessWidget {
   final Checkpoint checkpoint;
@@ -22,15 +23,11 @@ class CheckpointCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        elevation: 1,
+      decoration: NeuDecoration.box(context, radius: 12),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        color: colorScheme.surface,
-        surfaceTintColor: colorScheme.surfaceTint,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
+        child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,7 +76,6 @@ class CheckpointCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
         ),
       ),
     );

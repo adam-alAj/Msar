@@ -272,11 +272,7 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
     Position? position;
     try { position = await _locationService.getCurrentPosition(); } catch (_) {}
 
-    final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => VoteScreen(checkpoint: widget.checkpoint, userPosition: position)));
-
-    if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('✅ تم تسجيل تصويتك بنجاح'))]), backgroundColor: Colors.green, duration: Duration(seconds: 2), behavior: SnackBarBehavior.floating));
-    }
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => VoteScreen(checkpoint: widget.checkpoint, userPosition: position)));
   }
 
   String _formatTimeAgo(DateTime dateTime) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/marker_config.dart';
+import '../utils/neu_glass.dart';
 
 /// Floating legend overlay for the map, showing icon+color meaning per status.
 class MapLegend extends StatelessWidget {
@@ -10,19 +11,8 @@ class MapLegend extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Container(
+    return GlassContainer(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.2),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

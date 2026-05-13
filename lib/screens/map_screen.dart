@@ -17,6 +17,7 @@ import '../services/location_permission_service.dart';
 import '../services/tile_cache_service.dart';
 import '../utils/constants.dart';
 import '../utils/localization.dart';
+import '../utils/neu_glass.dart';
 import '../widgets/checkpoint_marker.dart';
 import '../widgets/checkpoint_card.dart';
 import '../widgets/freshness_indicator.dart';
@@ -574,10 +575,7 @@ class _MapScreenState extends State<MapScreen>
   Widget _buildTabBar(ColorScheme colorScheme, bool isDark) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(30),
-      ),
+      decoration: NeuDecoration.box(context, radius: 30),
       child: TabBar(
         controller: _tabController,
         onTap: (i) => setState(() => _selectedTabIndex = i),
