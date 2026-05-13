@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/checkpoint.dart';
 import '../models/checkpoint_status.dart';
+import '../utils/app_icons.dart';
 import '../utils/constants.dart';
 import '../utils/neu_glass.dart';
 
@@ -39,7 +40,7 @@ class CheckpointCard extends StatelessWidget {
                     child: Container(
                       width: 36, height: 36,
                       decoration: BoxDecoration(color: colorScheme.primaryContainer, borderRadius: BorderRadius.circular(10)),
-                      child: Icon(Icons.location_on, color: colorScheme.primary, size: 20),
+                      child: Icon(AppIcons.location, color: colorScheme.primary, size: 20),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -56,7 +57,7 @@ class CheckpointCard extends StatelessWidget {
                       child: Material(
                         color: Colors.transparent,
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.place, size: 10, color: colorScheme.onSurfaceVariant),
+                          Icon(AppIcons.place, size: 10, color: colorScheme.onSurfaceVariant),
                           const SizedBox(width: 2),
                           Text(checkpoint.region, style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant)),
                         ]),
@@ -73,9 +74,9 @@ class CheckpointCard extends StatelessWidget {
 
                 // Direction tiles
                 Row(children: [
-                  Expanded(child: _buildDirectionTile(context, 'للداخل', entranceStatus, entrancePercentage, entranceVotes, Icons.arrow_forward)),
+                  Expanded(child: _buildDirectionTile(context, 'للداخل', entranceStatus, entrancePercentage, entranceVotes, AppIcons.arrowForward)),
                   const SizedBox(width: 8),
-                  Expanded(child: _buildDirectionTile(context, 'للخارج', exitStatus, exitPercentage, exitVotes, Icons.arrow_back)),
+                  Expanded(child: _buildDirectionTile(context, 'للخارج', exitStatus, exitPercentage, exitVotes, AppIcons.arrowBack)),
                 ]),
                 const SizedBox(height: 8),
 
@@ -86,7 +87,7 @@ class CheckpointCard extends StatelessWidget {
                   child: Center(child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Text('تفاصيل', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: colorScheme.primary)),
                     const SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_ios, size: 10, color: colorScheme.primary),
+                    Icon(AppIcons.arrowForwardIos, size: 10, color: colorScheme.primary),
                   ])),
                 ),
               ],

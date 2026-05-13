@@ -7,6 +7,7 @@ import '../providers/governorate_provider.dart';
 import '../services/checkpoint_service.dart';
 import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
+import '../utils/app_icons.dart';
 import '../utils/constants.dart';
 import '../widgets/skeleton_loaders.dart';
 import '../widgets/first_vote_celebration.dart';
@@ -50,14 +51,14 @@ class _VoteScreenState extends State<VoteScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(color: colorScheme.onPrimary.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                child: Icon(Icons.how_to_vote, color: colorScheme.onPrimary, size: 22),
+                child: Icon(AppIcons.vote, color: colorScheme.onPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Text('تسجيل تصويت جديد', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colorScheme.onPrimary)),
             ]),
             backgroundColor: Colors.transparent,
             elevation: 0,
-            leading: IconButton(icon: Icon(Icons.arrow_back_ios, color: colorScheme.onPrimary), onPressed: () => Navigator.pop(context)),
+            leading: IconButton(icon: Icon(AppIcons.arrowBackIos, color: colorScheme.onPrimary), onPressed: () => Navigator.pop(context)),
           ),
         ),
       ),
@@ -76,7 +77,7 @@ class _VoteScreenState extends State<VoteScreen> {
                 Container(
                   width: 60, height: 60,
                   decoration: BoxDecoration(color: colorScheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
-                  child: Icon(Icons.location_on, size: 32, color: colorScheme.primary),
+                  child: Icon(AppIcons.location, size: 32, color: colorScheme.primary),
                 ),
                 const SizedBox(height: 12),
                 Text(widget.checkpoint.name, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colorScheme.onSurface), textAlign: TextAlign.center),
@@ -87,7 +88,7 @@ class _VoteScreenState extends State<VoteScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.gps_fixed, size: 12, color: colorScheme.primary),
+                      Icon(AppIcons.gpsFixed, size: 12, color: colorScheme.primary),
                       const SizedBox(width: 4),
                       Text(
                         context.watch<GovernorateProvider>().currentRegionAr ?? widget.checkpoint.region,
@@ -104,7 +105,7 @@ class _VoteScreenState extends State<VoteScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.info_outline, size: 18, color: colorScheme.onTertiaryContainer),
+                    Icon(AppIcons.info, size: 18, color: colorScheme.onTertiaryContainer),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -122,7 +123,7 @@ class _VoteScreenState extends State<VoteScreen> {
             _buildDirectionVoteCard(
               title: 'للداخل',
               subtitle: 'من الطريق الخارجة دخولا بالمنطقة',
-              icon: Icons.arrow_forward,
+              icon: AppIcons.arrowForward,
               selectedStatus: _entranceStatus,
               onStatusSelected: (s) { HapticService.voteSelected(context, s); setState(() { _entranceStatus = s; _hasVotedOnce = true; }); },
             ),
@@ -132,7 +133,7 @@ class _VoteScreenState extends State<VoteScreen> {
             _buildDirectionVoteCard(
               title: 'للخارج',
               subtitle: 'خارج من المنطقة باتجاه شارع رئيسي أو خط سريع',
-              icon: Icons.arrow_back,
+              icon: AppIcons.arrowBack,
               selectedStatus: _exitStatus,
               onStatusSelected: (s) { HapticService.voteSelected(context, s); setState(() { _exitStatus = s; _hasVotedOnce = true; }); },
             ),
@@ -145,7 +146,7 @@ class _VoteScreenState extends State<VoteScreen> {
               decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(20)),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: colorScheme.tertiaryContainer, borderRadius: BorderRadius.circular(12)), child: Icon(Icons.comment, size: 20, color: colorScheme.onTertiaryContainer)),
+                  Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: colorScheme.tertiaryContainer, borderRadius: BorderRadius.circular(12)), child: Icon(AppIcons.comment, size: 20, color: colorScheme.onTertiaryContainer)),
                   const SizedBox(width: 12),
                   Text('تعليق إضافي', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
                   const Spacer(),
@@ -192,7 +193,7 @@ class _VoteScreenState extends State<VoteScreen> {
                 child: _isSubmitting
                     ? SkeletonShimmer(child: Container(height: 22, width: 120, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(11))))
                     : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        const Icon(Icons.send_rounded, size: 22),
+                        const Icon(AppIcons.send, size: 22),
                         const SizedBox(width: 12),
                         const Text('إرسال التصويت', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       ]),
@@ -215,9 +216,9 @@ class _VoteScreenState extends State<VoteScreen> {
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final statusOptions = [
-      {'value': 'OPEN', 'label': 'سالك', 'icon': Icons.check_circle},
-      {'value': 'CROWDED', 'label': 'أزمة', 'icon': Icons.warning_amber},
-      {'value': 'CLOSED', 'label': 'مغلق', 'icon': Icons.block},
+      {'value': 'OPEN', 'label': 'سالك', 'icon': AppIcons.checkpointOpen},
+      {'value': 'CROWDED', 'label': 'أزمة', 'icon': AppIcons.checkpointCrowded},
+      {'value': 'CLOSED', 'label': 'مغلق', 'icon': AppIcons.checkpointClosed},
     ];
 
     return Container(
@@ -312,7 +313,7 @@ class _VoteScreenState extends State<VoteScreen> {
           await Future.delayed(const Duration(milliseconds: 2800));
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('✓ تم تسجيل تصويتك بنجاح! شكراً لمشاركتك'))]), backgroundColor: Colors.green.shade700, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Row(children: [Icon(AppIcons.checkpointOpen, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('✓ تم تسجيل تصويتك بنجاح! شكراً لمشاركتك'))]), backgroundColor: Colors.green.shade700, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
           Navigator.pop(context, true);
         }
       }

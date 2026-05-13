@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/tile_cache_service.dart';
+import '../utils/app_icons.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -28,22 +29,22 @@ class SettingsScreen extends StatelessWidget {
             segments: const [
               ButtonSegment(
                 value: AppThemeMode.autoSolar,
-                icon: Icon(Icons.wb_twilight),
+                icon: Icon(AppIcons.themeSolar),
                 label: Text('شمسي'),
               ),
               ButtonSegment(
                 value: AppThemeMode.system,
-                icon: Icon(Icons.brightness_auto),
+                icon: Icon(AppIcons.themeSystem),
                 label: Text('نظام'),
               ),
               ButtonSegment(
                 value: AppThemeMode.light,
-                icon: Icon(Icons.light_mode),
+                icon: Icon(AppIcons.themeLight),
                 label: Text('فاتح'),
               ),
               ButtonSegment(
                 value: AppThemeMode.dark,
-                icon: Icon(Icons.dark_mode),
+                icon: Icon(AppIcons.themeDark),
                 label: Text('داكن'),
               ),
             ],
@@ -58,7 +59,7 @@ class SettingsScreen extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Row(
                 children: [
-                  Icon(Icons.wb_sunny_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                  Icon(AppIcons.sunOutlined, size: 14, color: colorScheme.onSurfaceVariant),
                   const SizedBox(width: 4),
                   Text(
                     'الشروق ${_formatTime(themeProvider.sunrise)} — الغروب ${_formatTime(themeProvider.sunset)}',
@@ -96,7 +97,7 @@ class SettingsScreen extends StatelessWidget {
                 );
               }
             },
-            icon: const Icon(Icons.delete_outline),
+            icon: const Icon(AppIcons.delete),
             label: const Text('مسح ذاكرة الخريطة'),
           ),
         ],

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../utils/app_icons.dart';
 
 class FreshnessIndicator extends StatefulWidget {
   final DateTime? lastUpdated;
@@ -57,7 +58,7 @@ class _FreshnessIndicatorState extends State<FreshnessIndicator> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.access_time, size: 11, color: color),
+            Icon(AppIcons.clock, size: 11, color: color),
             const SizedBox(width: 4),
             Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
           ],

@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  phosphor_flutter: ^2.1.0
 
   
   # Firebase

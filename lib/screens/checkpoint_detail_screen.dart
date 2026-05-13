@@ -5,6 +5,7 @@ import '../models/checkpoint_status.dart';
 import '../services/checkpoint_service.dart';
 import '../services/location_service.dart';
 import '../services/auth_service.dart';
+import '../utils/app_icons.dart';
 import '../utils/localization.dart';
 import '../widgets/direction_status_card.dart';
 import '../widgets/skeleton_loaders.dart';
@@ -76,14 +77,14 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
             child: Container(
               width: 36, height: 36,
               decoration: BoxDecoration(color: colorScheme.primaryContainer, borderRadius: BorderRadius.circular(10)),
-              child: Icon(Icons.location_on, color: colorScheme.primary, size: 20),
+              child: Icon(AppIcons.location, color: colorScheme.primary, size: 20),
             ),
           ),
           const SizedBox(width: 8),
           Container(
             decoration: BoxDecoration(color: colorScheme.primaryContainer, borderRadius: BorderRadius.circular(12)),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              icon: const Icon(AppIcons.backNav),
               onPressed: () => Navigator.pop(context),
               color: colorScheme.primary,
               iconSize: 18,
@@ -106,7 +107,7 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
                   child: Material(
                     color: Colors.transparent,
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.place, size: 12, color: colorScheme.onSurfaceVariant),
+                      Icon(AppIcons.place, size: 12, color: colorScheme.onSurfaceVariant),
                       const SizedBox(width: 2),
                       Text(widget.checkpoint.region, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
                     ]),
@@ -139,13 +140,13 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
   Widget _buildErrorState(Object? error, ColorScheme colorScheme) {
     return Center(
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.error_outline, size: 64, color: colorScheme.error),
+        Icon(AppIcons.error, size: 64, color: colorScheme.error),
         const SizedBox(height: 16),
         Text('حدث خطأ في تحميل البيانات', style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant)),
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: () => setState(() { _statusStream = _checkpointService.watchCheckpointStatus(widget.checkpoint.id); }),
-          icon: const Icon(Icons.refresh),
+          icon: const Icon(AppIcons.refresh),
           label: const Text('إعادة المحاولة'),
         ),
       ]),
@@ -155,11 +156,11 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
   Widget _buildNoDataState(ColorScheme colorScheme) {
     return Center(
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.info_outline, size: 64, color: colorScheme.onSurfaceVariant),
+        Icon(AppIcons.info, size: 64, color: colorScheme.onSurfaceVariant),
         const SizedBox(height: 16),
         Text('لا توجد بيانات حالياً', style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant)),
         const SizedBox(height: 16),
-        ElevatedButton.icon(onPressed: () => _handleVote(context), icon: const Icon(Icons.how_to_vote), label: const Text('كن أول من يصوّت')),
+        ElevatedButton.icon(onPressed: () => _handleVote(context), icon: const Icon(AppIcons.vote), label: const Text('كن أول من يصوّت')),
       ]),
     );
   }
@@ -174,9 +175,9 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
           const SizedBox(height: 20),
           _buildSectionHeader('الحالة الحالية', colorScheme),
           const SizedBox(height: 12),
-          DirectionStatusCard(title: AppLocalizations.tr('entrance'), status: status.entrance, icon: Icons.arrow_forward, onVotePressed: () => _handleVote(context)),
+          DirectionStatusCard(title: AppLocalizations.tr('entrance'), status: status.entrance, icon: AppIcons.arrowForward, onVotePressed: () => _handleVote(context)),
           const SizedBox(height: 16),
-          DirectionStatusCard(title: AppLocalizations.tr('exit'), status: status.exit, icon: Icons.arrow_back, onVotePressed: () => _handleVote(context)),
+          DirectionStatusCard(title: AppLocalizations.tr('exit'), status: status.exit, icon: AppIcons.arrowBack, onVotePressed: () => _handleVote(context)),
           const SizedBox(height: 20),
           _buildVotingInfoCard(colorScheme),
           const SizedBox(height: 20),
@@ -200,9 +201,9 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildStatItem('إجمالي التصويتات', totalVotes.toString(), Icons.how_to_vote_outlined, colorScheme),
+          _buildStatItem('إجمالي التصويتات', totalVotes.toString(), AppIcons.voteOutlined, colorScheme),
           Container(width: 1, height: 40, color: colorScheme.onPrimary.withOpacity(0.3)),
-          _buildStatItem('آخر تحديث', _formatTimeAgo(lastUpdate), Icons.update_rounded, colorScheme),
+          _buildStatItem('آخر تحديث', _formatTimeAgo(lastUpdate), AppIcons.clock, colorScheme),
         ],
       ),
     );
@@ -236,7 +237,7 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Icon(Icons.how_to_vote, size: 20, color: colorScheme.primary),
+          Icon(AppIcons.vote, size: 20, color: colorScheme.primary),
           const SizedBox(width: 8),
           Text('معلومات التصويت', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colorScheme.primary)),
         ]),
@@ -255,12 +256,12 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
       decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(12)),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Row(children: [
-          Icon(Icons.timer_outlined, size: 16, color: colorScheme.onSurfaceVariant),
+          Icon(AppIcons.clock, size: 16, color: colorScheme.onSurfaceVariant),
           const SizedBox(width: 4),
           Text('للداخل: ${_formatTimeAgo(status.entrance.lastUpdated)}', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
         ]),
         Row(children: [
-          Icon(Icons.timer_outlined, size: 16, color: colorScheme.onSurfaceVariant),
+          Icon(AppIcons.clock, size: 16, color: colorScheme.onSurfaceVariant),
           const SizedBox(width: 4),
           Text('للخارج: ${_formatTimeAgo(status.exit.lastUpdated)}', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
         ]),
@@ -283,7 +284,7 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         ),
-        child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.how_to_vote, size: 22), SizedBox(width: 12), Text('تصويت', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
+        child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(AppIcons.vote, size: 22), SizedBox(width: 12), Text('تصويت', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
       ),
     );
   }

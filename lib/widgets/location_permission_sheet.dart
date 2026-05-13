@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_icons.dart';
 
 /// Contextual bottom sheet explaining why location is needed.
 /// Shows before the system permission dialog to build trust.
@@ -55,7 +56,7 @@ class LocationPermissionSheet extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Icon(
-            Icons.my_location,
+            AppIcons.myLocation,
             size: 48,
             color: colorScheme.primary,
           ),
@@ -87,8 +88,8 @@ class LocationPermissionSheet extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: () => Navigator.pop(context, true),
               icon: Icon(isDeniedForever || isServiceDisabled
-                  ? Icons.settings
-                  : Icons.location_on),
+                  ? AppIcons.settings
+                  : AppIcons.location),
               label: Text(
                 isServiceDisabled
                     ? 'تفعيل خدمة الموقع'

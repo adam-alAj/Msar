@@ -7,6 +7,7 @@ import 'firebase_options.dart';
 import 'providers/theme_provider.dart';
 import 'providers/governorate_provider.dart';
 import 'services/tile_cache_service.dart';
+import 'utils/app_icons.dart';
 import 'utils/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
@@ -93,7 +94,7 @@ class ErrorApp extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const Icon(AppIcons.error, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
                 const Text(
                   'فشل في تحميل التطبيق',

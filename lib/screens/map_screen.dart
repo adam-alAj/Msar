@@ -15,6 +15,7 @@ import '../services/auth_service.dart';
 import '../services/checkpoint_service.dart';
 import '../services/location_permission_service.dart';
 import '../services/tile_cache_service.dart';
+import '../utils/app_icons.dart';
 import '../utils/constants.dart';
 import '../utils/localization.dart';
 import '../utils/neu_glass.dart';
@@ -235,7 +236,7 @@ class _MapScreenState extends State<MapScreen>
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.notifications_active, color: Colors.white, size: 18),
+                const Icon(AppIcons.notification, color: Colors.white, size: 18),
                 const SizedBox(width: 8),
                 Expanded(child: Text('تغيّر: ${changes.first}', style: const TextStyle(fontSize: 13))),
               ],
@@ -381,7 +382,7 @@ class _MapScreenState extends State<MapScreen>
           ? FloatingActionButton(
               onPressed: () => _showAddCheckpointDialog(),
               backgroundColor: colorScheme.primary,
-              child: const Icon(Icons.add_location_alt),
+              child: const Icon(AppIcons.addLocation),
             )
           : null,
     );
@@ -409,7 +410,7 @@ class _MapScreenState extends State<MapScreen>
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Icon(Icons.filter_alt_rounded, color: Colors.white, size: 30),
+                  child: const Icon(AppIcons.filter, color: Colors.white, size: 30),
                 ),
                 const SizedBox(height: 20),
                 const Text(
@@ -428,10 +429,10 @@ class _MapScreenState extends State<MapScreen>
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                _buildDrawerRegionTile(null, 'جميع المناطق', Icons.public, colorScheme.primary, colorScheme),
+                _buildDrawerRegionTile(null, 'جميع المناطق', AppIcons.globe, colorScheme.primary, colorScheme),
                 const Divider(height: 1),
                 ...AppConstants.regions.map((r) =>
-                    _buildDrawerRegionTile(r, r, Icons.place, colorScheme.primary, colorScheme)),
+                    _buildDrawerRegionTile(r, r, AppIcons.place, colorScheme.primary, colorScheme)),
               ],
             ),
           ),
@@ -463,7 +464,7 @@ class _MapScreenState extends State<MapScreen>
           ? Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(color: iconColor.withOpacity(0.2), shape: BoxShape.circle),
-              child: Icon(Icons.check, color: iconColor, size: 18),
+              child: Icon(AppIcons.check, color: iconColor, size: 18),
             )
           : null,
       tileColor: isSelected ? iconColor.withOpacity(0.08) : null,
@@ -486,7 +487,7 @@ class _MapScreenState extends State<MapScreen>
               borderRadius: BorderRadius.circular(10),
             ),
             child: IconButton(
-              icon: const Icon(Icons.location_on, size: 20),
+              icon: const Icon(AppIcons.location, size: 20),
               onPressed: _openDrawer,
               color: colorScheme.primary,
               padding: EdgeInsets.zero,
@@ -527,9 +528,9 @@ class _MapScreenState extends State<MapScreen>
               child: Container(
                 margin: const EdgeInsets.only(right: 4),
                 child: Chip(
-                  avatar: const Icon(Icons.gps_fixed, size: 12),
+                  avatar: const Icon(AppIcons.gpsFixed, size: 12),
                   label: Text('تعرض: $_selectedRegion', style: const TextStyle(fontSize: 10)),
-                  deleteIcon: const Icon(Icons.close, size: 12),
+                  deleteIcon: const Icon(AppIcons.close, size: 12),
                   onDeleted: () {
                     _selectRegion(null);
                     context.read<GovernorateProvider>().setManual(null);
@@ -543,21 +544,21 @@ class _MapScreenState extends State<MapScreen>
               ),
             ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, size: 20),
+            icon: const Icon(AppIcons.refresh, size: 20),
             onPressed: _isLoadingStatuses ? null : _refreshStatuses,
             color: colorScheme.primary,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
           IconButton(
-            icon: const Icon(Icons.settings_rounded, size: 20),
+            icon: const Icon(AppIcons.settings, size: 20),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
             color: colorScheme.primary,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
           IconButton(
-            icon: const Icon(Icons.logout_rounded, size: 20),
+            icon: const Icon(AppIcons.logout, size: 20),
             onPressed: () async {
               await _authService.signOut();
               if (mounted) {
@@ -590,8 +591,8 @@ class _MapScreenState extends State<MapScreen>
         labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         dividerColor: Colors.transparent,
         tabs: const [
-          Tab(icon: Icon(Icons.map), text: 'الخريطة'),
-          Tab(icon: Icon(Icons.list), text: 'القائمة'),
+          Tab(icon: Icon(AppIcons.map), text: 'الخريطة'),
+          Tab(icon: Icon(AppIcons.list), text: 'القائمة'),
         ],
       ),
     );
@@ -608,13 +609,13 @@ class _MapScreenState extends State<MapScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.wifi_off_rounded, size: 64, color: colorScheme.onSurfaceVariant),
+          Icon(AppIcons.wifiOff, size: 64, color: colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
           Text(_errorMessage!, style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant), textAlign: TextAlign.center),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: _subscribeToCheckpoints,
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(AppIcons.refresh),
             label: const Text('إعادة المحاولة'),
           ),
         ],
@@ -707,7 +708,7 @@ class _MapScreenState extends State<MapScreen>
             onPressed: _onLocationFabPressed,
             backgroundColor: Theme.of(context).colorScheme.primaryContainer,
             child: Icon(
-              _userLocation != null ? Icons.my_location : Icons.location_searching,
+              _userLocation != null ? AppIcons.myLocation : AppIcons.locationSearching,
               color: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ),
@@ -727,7 +728,7 @@ class _MapScreenState extends State<MapScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.cloud_off, size: 14, color: Theme.of(context).colorScheme.onErrorContainer),
+                    Icon(AppIcons.cloudOff, size: 14, color: Theme.of(context).colorScheme.onErrorContainer),
                     const SizedBox(width: 6),
                     Text(
                       'وضع عدم الاتصال — خريطة مخزنة مؤقتاً',
@@ -871,14 +872,14 @@ class _MapScreenState extends State<MapScreen>
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'اسم الحاجز', hintText: 'مثال: حاجز قلنديا', border: OutlineInputBorder(), prefixIcon: Icon(Icons.location_on)),
+                decoration: const InputDecoration(labelText: 'اسم الحاجز', hintText: 'مثال: حاجز قلنديا', border: OutlineInputBorder(), prefixIcon: Icon(AppIcons.location)),
                 textAlign: TextAlign.right,
                 textDirection: TextDirection.rtl,
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: regionController,
-                decoration: const InputDecoration(labelText: 'المنطقة', hintText: 'مثال: رام الله', border: OutlineInputBorder(), prefixIcon: Icon(Icons.place)),
+                decoration: const InputDecoration(labelText: 'المنطقة', hintText: 'مثال: رام الله', border: OutlineInputBorder(), prefixIcon: Icon(AppIcons.place)),
                 textAlign: TextAlign.right,
                 textDirection: TextDirection.rtl,
               ),

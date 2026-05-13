@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import '../utils/app_icons.dart';
 
 class EmptyStateView extends StatelessWidget {
   final String lottiePath;
@@ -83,7 +84,7 @@ class EmptyStateView extends StatelessWidget {
                 const SizedBox(height: 20),
                 TextButton.icon(
                   onPressed: onAction,
-                  icon: const Icon(Icons.clear, size: 16),
+                  icon: const Icon(AppIcons.clear, size: 16),
                   label: Text(actionLabel!),
                 ),
               ],

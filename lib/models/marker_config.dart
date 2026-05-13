@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_icons.dart';
 import '../utils/app_theme.dart';
 
 /// Maps each checkpoint status to a distinct icon, color, and Arabic label.
@@ -25,19 +26,19 @@ class MarkerConfig {
   /// - CLOSED: block — horizontal barrier, universal "stop"
   static const Map<String, MarkerConfig> statuses = {
     'OPEN': MarkerConfig(
-      icon: Icons.check_circle,
+      icon: AppIcons.checkpointOpen,
       lightColor: AppTheme.lightOpenColor,
       darkColor: AppTheme.darkOpenColor,
       labelAr: 'سالك',
     ),
     'CROWDED': MarkerConfig(
-      icon: Icons.warning,
+      icon: AppIcons.checkpointCrowded,
       lightColor: AppTheme.lightCrowdedColor,
       darkColor: AppTheme.darkCrowdedColor,
       labelAr: 'أزمة',
     ),
     'CLOSED': MarkerConfig(
-      icon: Icons.block,
+      icon: AppIcons.checkpointClosed,
       lightColor: AppTheme.lightClosedColor,
       darkColor: AppTheme.darkClosedColor,
       labelAr: 'مغلق',

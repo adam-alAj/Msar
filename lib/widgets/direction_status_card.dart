@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/checkpoint_status.dart';
+import '../utils/app_icons.dart';
 import '../utils/constants.dart';
 import '../utils/localization.dart';
 
@@ -75,7 +76,7 @@ class DirectionStatusCard extends StatelessWidget {
 
                   // Stats row
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.how_to_vote_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                    Icon(AppIcons.voteOutlined, size: 14, color: colorScheme.onSurfaceVariant),
                     const SizedBox(width: 4),
                     Text('${status.totalVotes} ${AppLocalizations.tr('votes')}', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
                     if (status.totalVotes > 0) ...[
@@ -83,7 +84,7 @@ class DirectionStatusCard extends StatelessWidget {
                       Text('${status.percentage.toStringAsFixed(0)}%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor)),
                     ],
                     Text('  ·  ', style: TextStyle(color: colorScheme.outlineVariant)),
-                    Icon(Icons.access_time, size: 12, color: colorScheme.onSurfaceVariant),
+                    Icon(AppIcons.clock, size: 12, color: colorScheme.onSurfaceVariant),
                     const SizedBox(width: 3),
                     Text(_formatTimeAgo(status.lastUpdated), style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
                   ]),
@@ -93,7 +94,7 @@ class DirectionStatusCard extends StatelessWidget {
                     const SizedBox(height: 14),
                     OutlinedButton.icon(
                       onPressed: onVotePressed,
-                      icon: const Icon(Icons.how_to_vote, size: 16),
+                      icon: const Icon(AppIcons.vote, size: 16),
                       label: Text(AppLocalizations.tr('vote')),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: statusColor,
