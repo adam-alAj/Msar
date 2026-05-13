@@ -59,6 +59,23 @@ class AppLocalizations {
     'theme_light': 'فاتح',
     'theme_dark': 'داكن',
     'theme_system_hint': 'عند اختيار "تلقائي"، يتبع التطبيق إعدادات النظام.',
+    // Governorate smart defaults
+    'gov_ramallah': 'محافظة رام الله والبيرة',
+    'gov_nablus': 'محافظة نابلس',
+    'gov_hebron': 'محافظة الخليل',
+    'gov_bethlehem': 'محافظة بيت لحم',
+    'gov_jericho': 'محافظة أريحا والأغوار',
+    'gov_jenin': 'محافظة جنين',
+    'gov_tulkarm': 'محافظة طولكرم',
+    'gov_qalqilya': 'محافظة قلقيلية',
+    'gov_salfit': 'محافظة سلفيت',
+    'gov_tubas': 'محافظة طوباس',
+    'showing_area': 'تعرض',
+    'switch_governorate': 'هل تريد التبديل إلى',
+    'switch': 'تبديل',
+    'nearest_to_you': 'الأقرب إليك',
+    'detecting_location': 'جاري تحديد موقعك...',
+    'all_areas': 'جميع المناطق',
   };
 
   static String tr(String key) {

@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cache/flutter_map_cache.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 import '../models/checkpoint.dart';
 import '../models/checkpoint_status.dart';
+import '../models/governorate.dart';
+import '../providers/governorate_provider.dart';
 import '../services/auth_service.dart';
 import '../services/checkpoint_service.dart';
 import '../services/location_permission_service.dart';
@@ -63,6 +67,62 @@ class _MapScreenState extends State<MapScreen>
       final offline = results.every((r) => r == ConnectivityResult.none);
       if (offline != _isOffline) setState(() => _isOffline = offline);
     });
+    // Auto-detect governorate after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncFromGovernorate());
+  }
+
+  bool _governorateInitialized = false;
+
+  void _syncFromGovernorate() {
+    final govProvider = context.read<GovernorateProvider>();
+    govProvider.addListener(_onGovernorateChanged);
+    // If already detected, apply immediately
+    if (govProvider.current != null && !_governorateInitialized) {
+      _applyGovernorateDefaults(govProvider);
+    }
+  }
+
+  void _onGovernorateChanged() {
+    if (!mounted) return;
+    final govProvider = context.read<GovernorateProvider>();
+    _applyGovernorateDefaults(govProvider);
+    // Show boundary crossing prompt
+    if (govProvider.pendingBoundaryCrossing != null) {
+      _showBoundaryCrossingPrompt(govProvider);
+    }
+  }
+
+  void _applyGovernorateDefaults(GovernorateProvider govProvider) {
+    if (_governorateInitialized && _selectedRegion != null) return;
+    final gov = govProvider.current;
+    if (gov == null) return;
+    _governorateInitialized = true;
+    setState(() {
+      _selectedRegion = gov.nameAr;
+      _userLocation = govProvider.userPosition;
+    });
+    _applyFilter();
+    // Auto-center map on governorate center (privacy: not exact user location)
+    try { _mapController.move(gov.center, 13.0); } catch (_) {}
+  }
+
+  void _showBoundaryCrossingPrompt(GovernorateProvider govProvider) {
+    final pending = govProvider.pendingBoundaryCrossing!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('هل تريد التبديل إلى محافظة ${pending.nameAr}؟'),
+        action: SnackBarAction(
+          label: 'تبديل',
+          onPressed: () {
+            govProvider.acceptBoundaryCrossing();
+            setState(() => _selectedRegion = pending.nameAr);
+            _applyFilter();
+            try { _mapController.move(pending.center, 13.0); } catch (_) {}
+          },
+        ),
+        duration: const Duration(seconds: 8),
+      ),
+    );
   }
 
   @override
@@ -70,6 +130,7 @@ class _MapScreenState extends State<MapScreen>
     _checkpointSub?.cancel();
     _connectivitySub?.cancel();
     _tabController.dispose();
+    try { context.read<GovernorateProvider>().removeListener(_onGovernorateChanged); } catch (_) {}
     super.dispose();
   }
 
@@ -141,6 +202,13 @@ class _MapScreenState extends State<MapScreen>
   void _selectRegion(String? region) {
     setState(() => _selectedRegion = region);
     _applyFilter();
+    if (region != null) {
+      context.read<GovernorateProvider>().setManual(region);
+      final gov = Governorate.all.where((g) => g.nameAr == region).firstOrNull;
+      if (gov != null) {
+        try { _mapController.move(gov.center, 13.0); } catch (_) {}
+      }
+    }
   }
 
   Future<void> _refreshStatuses() async {
@@ -324,9 +392,14 @@ class _MapScreenState extends State<MapScreen>
               child: Container(
                 margin: const EdgeInsets.only(right: 4),
                 child: Chip(
-                  label: Text(_selectedRegion!, style: const TextStyle(fontSize: 10)),
+                  avatar: const Icon(Icons.gps_fixed, size: 12),
+                  label: Text('تعرض: $_selectedRegion', style: const TextStyle(fontSize: 10)),
                   deleteIcon: const Icon(Icons.close, size: 12),
-                  onDeleted: () => _selectRegion(null),
+                  onDeleted: () {
+                    _selectRegion(null);
+                    context.read<GovernorateProvider>().setManual(null);
+                    try { _mapController.move(AppConstants.defaultLocation, AppConstants.defaultZoom); } catch (_) {}
+                  },
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
@@ -550,11 +623,21 @@ class _MapScreenState extends State<MapScreen>
   Widget _buildListView() {
     if (_filteredCheckpoints.isEmpty) return _buildEmptyState(false);
 
+    // Sort by haversine distance (nearest first) when user location available
+    final sorted = List<Checkpoint>.from(_filteredCheckpoints);
+    if (_userLocation != null) {
+      sorted.sort((a, b) {
+        final dA = _haversineKm(_userLocation!.latitude, _userLocation!.longitude, a.latitude, a.longitude);
+        final dB = _haversineKm(_userLocation!.latitude, _userLocation!.longitude, b.latitude, b.longitude);
+        return dA.compareTo(dB);
+      });
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _filteredCheckpoints.length,
+      itemCount: sorted.length,
       itemBuilder: (context, index) {
-        final cp = _filteredCheckpoints[index];
+        final cp = sorted[index];
         return CheckpointCard(
           checkpoint: cp,
           status: _statuses[cp.id],
@@ -562,6 +645,15 @@ class _MapScreenState extends State<MapScreen>
         );
       },
     );
+  }
+
+  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371.0;
+    final dLat = (lat2 - lat1) * pi / 180;
+    final dLon = (lon2 - lon1) * pi / 180;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dLon / 2) * sin(dLon / 2);
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 
   Widget _buildEmptyState(bool isMap) {

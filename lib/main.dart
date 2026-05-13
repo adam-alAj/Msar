@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/theme_provider.dart';
+import 'providers/governorate_provider.dart';
 import 'services/tile_cache_service.dart';
 import 'utils/app_theme.dart';
 import 'screens/login_screen.dart';
@@ -36,8 +37,11 @@ void main() async {
   await TileCacheService.init();
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => GovernorateProvider()..init()),
+      ],
       child: const MyApp(),
     ),
   );

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 import '../models/checkpoint.dart';
 import '../models/vote.dart';
+import '../providers/governorate_provider.dart';
 import '../services/checkpoint_service.dart';
 import '../services/auth_service.dart';
 import '../utils/constants.dart';
@@ -78,7 +80,17 @@ class _VoteScreenState extends State<VoteScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(color: colorScheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
-                  child: Text(widget.checkpoint.region, style: TextStyle(fontSize: 13, color: colorScheme.primary, fontWeight: FontWeight.w500)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.gps_fixed, size: 12, color: colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        context.watch<GovernorateProvider>().currentRegionAr ?? widget.checkpoint.region,
+                        style: TextStyle(fontSize: 13, color: colorScheme.primary, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Container(
