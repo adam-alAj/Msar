@@ -34,19 +34,34 @@ class CheckpointCard extends StatelessWidget {
               children: [
                 // Header
                 Row(children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(color: colorScheme.primaryContainer, borderRadius: BorderRadius.circular(10)),
-                    child: Icon(Icons.location_on, color: colorScheme.primary, size: 20),
+                  Hero(
+                    tag: 'cp-icon-${checkpoint.id}',
+                    child: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: colorScheme.primaryContainer, borderRadius: BorderRadius.circular(10)),
+                      child: Icon(Icons.location_on, color: colorScheme.primary, size: 20),
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(checkpoint.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colorScheme.onSurface), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Row(children: [
-                      Icon(Icons.place, size: 10, color: colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 2),
-                      Text(checkpoint.region, style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant)),
-                    ]),
+                    Hero(
+                      tag: 'cp-name-${checkpoint.id}',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Text(checkpoint.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colorScheme.onSurface), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+                    Hero(
+                      tag: 'cp-region-${checkpoint.id}',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.place, size: 10, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 2),
+                          Text(checkpoint.region, style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant)),
+                        ]),
+                      ),
+                    ),
                   ])),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
