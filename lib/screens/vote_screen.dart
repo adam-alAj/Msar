@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../utils/constants.dart';
 import '../widgets/skeleton_loaders.dart';
+import '../widgets/first_vote_celebration.dart';
 
 class VoteScreen extends StatefulWidget {
   final Checkpoint checkpoint;
@@ -34,7 +35,8 @@ class _VoteScreenState extends State<VoteScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
+    return FirstVoteCelebration(
+      child: Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
@@ -200,6 +202,7 @@ class _VoteScreenState extends State<VoteScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -304,8 +307,14 @@ class _VoteScreenState extends State<VoteScreen> {
       await Future.wait(votes);
       if (mounted) {
         HapticService.voteConfirmed(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('✓ تم تسجيل تصويتك بنجاح! شكراً لمشاركتك'))]), backgroundColor: Colors.green.shade700, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
-        Navigator.pop(context, true);
+        final celebrated = await FirstVoteCelebration.trigger(context);
+        if (celebrated && mounted) {
+          await Future.delayed(const Duration(milliseconds: 2800));
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('✓ تم تسجيل تصويتك بنجاح! شكراً لمشاركتك'))]), backgroundColor: Colors.green.shade700, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
+          Navigator.pop(context, true);
+        }
       }
     } catch (e) {
       debugPrint('🔴 Vote submission error: $e');
