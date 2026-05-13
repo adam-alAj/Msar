@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/checkpoint.dart';
 import '../models/checkpoint_status.dart';
+import '../models/marker_config.dart';
 import '../utils/constants.dart';
 
 class CheckpointMarker extends StatelessWidget {
@@ -9,37 +10,39 @@ class CheckpointMarker extends StatelessWidget {
   final VoidCallback onTap;
 
   const CheckpointMarker({
-    Key? key,
+    super.key,
     required this.checkpoint,
     required this.status,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    final entranceColor =
-        _statusColor(status?.entrance.status ?? 'OPEN');
-    final exitColor =
-        _statusColor(status?.exit.status ?? 'OPEN');
-
-    final pinColor = _worstColor(
-        status?.entrance.status ?? 'OPEN', status?.exit.status ?? 'OPEN');
+    final brightness = Theme.of(context).brightness;
+    final colorScheme = Theme.of(context).colorScheme;
+    final worstStatus = _worstStatus(
+      status?.entrance.status ?? 'OPEN',
+      status?.exit.status ?? 'OPEN',
+    );
+    final config = MarkerConfig.forStatus(worstStatus);
+    final statusColor = config.color(brightness);
 
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Name label with dual-dot indicator
+          // Checkpoint name label
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 6,
+                  color: colorScheme.shadow.withValues(alpha: 0.25),
+                  blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
               ],
@@ -47,19 +50,31 @@ class CheckpointMarker extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _dot(entranceColor),
-                const SizedBox(width: 3),
-                _dot(exitColor),
-                const SizedBox(width: 5),
+                // Entrance status icon (small)
+                Icon(
+                  MarkerConfig.forStatus(status?.entrance.status ?? 'OPEN').icon,
+                  size: 12,
+                  color: MarkerConfig.forStatus(status?.entrance.status ?? 'OPEN')
+                      .color(brightness),
+                ),
+                const SizedBox(width: 2),
+                // Exit status icon (small)
+                Icon(
+                  MarkerConfig.forStatus(status?.exit.status ?? 'OPEN').icon,
+                  size: 12,
+                  color: MarkerConfig.forStatus(status?.exit.status ?? 'OPEN')
+                      .color(brightness),
+                ),
+                const SizedBox(width: 4),
                 Flexible(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 70),
+                    constraints: const BoxConstraints(maxWidth: 65),
                     child: Text(
                       checkpoint.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: Colors.black87,
+                        color: colorScheme.onSurface,
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
@@ -69,68 +84,42 @@ class CheckpointMarker extends StatelessWidget {
               ],
             ),
           ),
-          // Triangle pointer
-          CustomPaint(
-            size: const Size(12, 6),
-            painter: _TrianglePainter(Colors.white),
-          ),
-          // Pin icon
-          Icon(
-            Icons.location_on,
-            color: pinColor,
-            size: 28,
-            shadows: const [
-              Shadow(
-                  color: Colors.black38, blurRadius: 4, offset: Offset(0, 1)),
-            ],
+          const SizedBox(height: 2),
+          // Main status icon — 48dp touch target with distinct shape per status
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: statusColor,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.white,
+                width: 2.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: statusColor.withValues(alpha: 0.4),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(
+              config.icon,
+              color: Colors.white,
+              size: 26,
+              semanticLabel: config.labelAr,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _dot(Color color) {
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 1),
-      ),
-    );
-  }
-
-  Color _statusColor(String s) {
-    switch (s) {
-      case 'OPEN': return const Color(AppConstants.openColor);
-      case 'CROWDED': return const Color(AppConstants.crowdedColor);
-      case 'CLOSED': return const Color(AppConstants.closedColor);
-      default: return const Color(AppConstants.openColor);
-    }
-  }
-
-  Color _worstColor(String a, String b) {
+  String _worstStatus(String a, String b) {
     int priority(String s) => AppConstants.statusPriority[s] ?? 0;
-    return _statusColor(priority(a) >= priority(b) ? a : b);
+    return priority(a) >= priority(b) ? a : b;
   }
-}
-
-class _TrianglePainter extends CustomPainter {
-  final Color color;
-  _TrianglePainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width / 2, size.height)
-      ..lineTo(size.width, 0)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(_TrianglePainter old) => old.color != color;
 }

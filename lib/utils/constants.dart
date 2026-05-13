@@ -1,7 +1,14 @@
 // constants.dart
+import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import 'app_theme.dart';
 
 class AppConstants {
+  /// Theme-aware status color — use this in widgets instead of raw int colors.
+  static Color statusColorFor(BuildContext context, String status) {
+    return AppTheme.statusColor(status, Theme.of(context).brightness);
+  }
+
   // West Bank approximate center
   static const LatLng defaultLocation = LatLng(31.9469, 35.2736);
   static const double defaultZoom = 10.0;

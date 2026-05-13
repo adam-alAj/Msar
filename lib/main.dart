@@ -1,29 +1,31 @@
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'providers/theme_provider.dart';
+import 'services/tile_cache_service.dart';
+import 'utils/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
 import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   debugPrint('🔵 Initializing Firebase...');
-  
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    
-    // Enable offline persistence for Firestore
+
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
-    
+
     debugPrint('🟢 Firebase initialized successfully!');
   } catch (e) {
     debugPrint('🔴 Firebase initialization failed: $e');
@@ -31,23 +33,29 @@ void main() async {
     return;
   }
 
-  runApp(const MyApp());
-}
+  await TileCacheService.init();
 
-// ... rest stays the same
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+
     return MaterialApp(
       title: 'حالة الحواجز',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeProvider.themeMode,
       home: StreamBuilder<User?>(
         stream: AuthService().authStateChanges,
         builder: (context, snapshot) {
@@ -65,11 +73,11 @@ class MyApp extends StatelessWidget {
               ),
             );
           }
-          
+
           if (snapshot.hasData) {
-            return MapScreen();
+            return const MapScreen();
           }
-          
+
           return const LoginScreen();
         },
       ),
@@ -105,10 +113,7 @@ class ErrorApp extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () {
-                    // Reload the app
-                    main();
-                  },
+                  onPressed: () => main(),
                   child: const Text('محاولة مرة أخرى'),
                 ),
               ],

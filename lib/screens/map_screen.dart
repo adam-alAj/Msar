@@ -1,17 +1,24 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_cache/flutter_map_cache.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/checkpoint.dart';
 import '../models/checkpoint_status.dart';
 import '../services/auth_service.dart';
 import '../services/checkpoint_service.dart';
+import '../services/location_permission_service.dart';
+import '../services/tile_cache_service.dart';
 import '../utils/constants.dart';
 import '../utils/localization.dart';
 import '../widgets/checkpoint_marker.dart';
 import '../widgets/checkpoint_card.dart';
+import '../widgets/map_legend.dart';
+import '../widgets/location_permission_sheet.dart';
 import 'checkpoint_detail_screen.dart';
 import 'login_screen.dart';
+import 'settings_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({Key? key}) : super(key: key);
@@ -36,10 +43,14 @@ class _MapScreenState extends State<MapScreen>
   String? _errorMessage;
 
   final MapController _mapController = MapController();
+  final LocationPermissionService _locationPermService = LocationPermissionService();
   late TabController _tabController;
   int _selectedTabIndex = 0;
+  LatLng? _userLocation;
 
   StreamSubscription<List<Checkpoint>>? _checkpointSub;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  bool _isOffline = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -48,11 +59,16 @@ class _MapScreenState extends State<MapScreen>
     _tabController = TabController(length: 2, vsync: this);
     _checkAdmin();
     _subscribeToCheckpoints();
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      final offline = results.every((r) => r == ConnectivityResult.none);
+      if (offline != _isOffline) setState(() => _isOffline = offline);
+    });
   }
 
   @override
   void dispose() {
     _checkpointSub?.cancel();
+    _connectivitySub?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -137,29 +153,26 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       key: _scaffoldKey,
-      drawer: _buildRegionDrawer(),
+      drawer: _buildRegionDrawer(colorScheme, isDark),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.green.shade50, Colors.white],
-          ),
-        ),
+        color: colorScheme.surface,
         child: SafeArea(
           child: Column(
             children: [
-              _buildModernAppBar(),
-              _buildTabBar(),
+              _buildModernAppBar(colorScheme, isDark),
+              _buildTabBar(colorScheme, isDark),
               Expanded(
                 child: _isLoading
-                    ? _buildLoadingState()
+                    ? _buildLoadingState(colorScheme)
                     : _errorMessage != null && _filteredCheckpoints.isEmpty
-                        ? _buildErrorState()
+                        ? _buildErrorState(colorScheme)
                         : _selectedTabIndex == 0
-                            ? _buildMapView()
+                            ? _buildMapView(isDark)
                             : _buildListView(),
               ),
             ],
@@ -169,15 +182,14 @@ class _MapScreenState extends State<MapScreen>
       floatingActionButton: _isAdmin
           ? FloatingActionButton(
               onPressed: () => _showAddCheckpointDialog(),
-              backgroundColor: Colors.green.shade700,
-              elevation: 4,
+              backgroundColor: colorScheme.primary,
               child: const Icon(Icons.add_location_alt),
             )
           : null,
     );
   }
 
-  Widget _buildRegionDrawer() {
+  Widget _buildRegionDrawer(ColorScheme colorScheme, bool isDark) {
     return Drawer(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
@@ -188,9 +200,7 @@ class _MapScreenState extends State<MapScreen>
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.green.shade600, Colors.green.shade600],
-              ),
+              color: colorScheme.primary,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,19 +216,12 @@ class _MapScreenState extends State<MapScreen>
                 const SizedBox(height: 20),
                 const Text(
                   'تصفية حسب المنطقة',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'اختر منطقة لعرض الحواجز فيها',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.8)),
                 ),
               ],
             ),
@@ -227,9 +230,10 @@ class _MapScreenState extends State<MapScreen>
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                _buildDrawerRegionTile(null, 'جميع المناطق', Icons.public, Colors.blue),
+                _buildDrawerRegionTile(null, 'جميع المناطق', Icons.public, colorScheme.primary, colorScheme),
                 const Divider(height: 1),
-                ...AppConstants.regions.map((r) => _buildDrawerRegionTile(r, r, Icons.place, Colors.green)),
+                ...AppConstants.regions.map((r) =>
+                    _buildDrawerRegionTile(r, r, Icons.place, colorScheme.primary, colorScheme)),
               ],
             ),
           ),
@@ -238,32 +242,29 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Widget _buildDrawerRegionTile(String? region, String label, IconData icon, Color iconColor) {
+  Widget _buildDrawerRegionTile(String? region, String label, IconData icon, Color iconColor, ColorScheme colorScheme) {
     final isSelected = _selectedRegion == region;
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isSelected ? iconColor.withOpacity(0.1) : Colors.grey.shade100,
+          color: isSelected ? iconColor.withOpacity(0.1) : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: isSelected ? iconColor : Colors.grey.shade600, size: 22),
+        child: Icon(icon, color: isSelected ? iconColor : colorScheme.onSurfaceVariant, size: 22),
       ),
       title: Text(
         label,
         style: TextStyle(
           fontSize: 16,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? iconColor : Colors.grey.shade800,
+          color: isSelected ? iconColor : colorScheme.onSurface,
         ),
       ),
       trailing: isSelected
           ? Container(
               padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: iconColor.withOpacity(0.2), shape: BoxShape.circle),
               child: Icon(Icons.check, color: iconColor, size: 18),
             )
           : null,
@@ -276,205 +277,164 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
- // Replace just the _buildModernAppBar method in map_screen.dart:
-
-Widget _buildModernAppBar() {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    child: Row(
-      children: [
-        // Menu button
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
+  Widget _buildModernAppBar(ColorScheme colorScheme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.location_on, size: 20),
+              onPressed: _openDrawer,
+              color: colorScheme.primary,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
           ),
-          child: IconButton(
-            icon: const Icon(Icons.location_on, size: 20),
-            onPressed: _openDrawer,
-            color: Colors.green.shade700,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  AppLocalizations.tr('مسار'),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colorScheme.primary),
+                ),
+                if (_isLoadingStatuses)
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 8, height: 8,
+                        child: CircularProgressIndicator(strokeWidth: 1.5, valueColor: AlwaysStoppedAnimation(colorScheme.primary)),
+                      ),
+                      const SizedBox(width: 3),
+                      Text('تحديث', style: TextStyle(fontSize: 9, color: colorScheme.primary)),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          if (_selectedRegion != null)
+            Flexible(
+              child: Container(
+                margin: const EdgeInsets.only(right: 4),
+                child: Chip(
+                  label: Text(_selectedRegion!, style: const TextStyle(fontSize: 10)),
+                  deleteIcon: const Icon(Icons.close, size: 12),
+                  onDeleted: () => _selectRegion(null),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, size: 20),
+            onPressed: _isLoadingStatuses ? null : _refreshStatuses,
+            color: colorScheme.primary,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
-        ),
-        const SizedBox(width: 6),
-        // Logo - smaller
-        
-        const SizedBox(width: 8),
-        // Title
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                AppLocalizations.tr('مسار'),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green.shade800,
-                ),
-              ),
-              if (_isLoadingStatuses)
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 8,
-                      height: 8,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.5,
-                        valueColor: AlwaysStoppedAnimation(Colors.green.shade400),
-                      ),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      'تحديث',
-                      style: TextStyle(fontSize: 9, color: Colors.green.shade400),
-                    ),
-                  ],
-                ),
-            ],
+          IconButton(
+            icon: const Icon(Icons.settings_rounded, size: 20),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+            color: colorScheme.primary,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
-        ),
-        // Region chip - compact
-        if (_selectedRegion != null)
-          Flexible(
-            child: Container(
-              margin: const EdgeInsets.only(right: 4),
-              child: Chip(
-                label: Text(_selectedRegion!, style: const TextStyle(fontSize: 10)),
-                backgroundColor: Colors.green.shade100,
-                deleteIcon: const Icon(Icons.close, size: 12),
-                onDeleted: () => _selectRegion(null),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-          ),
-        // Refresh button
-        IconButton(
-          icon: const Icon(Icons.refresh_rounded, size: 20),
-          onPressed: _isLoadingStatuses ? null : _refreshStatuses,
-          color: Colors.green.shade700,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-        ),
-        // Logout button
-        IconButton(
-          icon: const Icon(Icons.logout_rounded, size: 20),
-          onPressed: () async {
-            await _authService.signOut();
-            if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            }
-          },
-          color: Colors.green.shade700,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-        ),
-      ],
-    ),
-  );
-}
-  Widget _buildTabBar() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, size: 20),
+            onPressed: () async {
+              await _authService.signOut();
+              if (mounted) {
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+              }
+            },
+            color: colorScheme.primary,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
         ],
       ),
-     child: TabBar(
-  controller: _tabController,
-  onTap: (i) => setState(() => _selectedTabIndex = i),
-
-  // IMPORTANT: makes indicator stretch full tab
-  indicatorSize: TabBarIndicatorSize.tab,
-
-  indicator: BoxDecoration(
-    color: Colors.green.shade600,
-    borderRadius: BorderRadius.circular(30),
-  ),
-
-  labelColor: Colors.white,
-  unselectedLabelColor: Colors.grey.shade600,
-
-  labelStyle: const TextStyle(
-    fontWeight: FontWeight.bold,
-    fontSize: 14,
-  ),
-  dividerColor: Colors.transparent,
-  tabs: const [
-    Tab(icon: Icon(Icons.map), text: 'الخريطة'),
-    Tab(icon: Icon(Icons.list), text: 'القائمة'),
-  ],
-),
     );
   }
 
-  Widget _buildLoadingState() {
+  Widget _buildTabBar(ColorScheme colorScheme, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        onTap: (i) => setState(() => _selectedTabIndex = i),
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: colorScheme.primary,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        labelColor: colorScheme.onPrimary,
+        unselectedLabelColor: colorScheme.onSurfaceVariant,
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        dividerColor: Colors.transparent,
+        tabs: const [
+          Tab(icon: Icon(Icons.map), text: 'الخريطة'),
+          Tab(icon: Icon(Icons.list), text: 'القائمة'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState(ColorScheme colorScheme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SizedBox(
-            width: 50,
-            height: 50,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation(Colors.green.shade700),
-            ),
+            width: 50, height: 50,
+            child: CircularProgressIndicator(strokeWidth: 3, valueColor: AlwaysStoppedAnimation(colorScheme.primary)),
           ),
           const SizedBox(height: 16),
-          Text('جاري تحميل البيانات...', style: TextStyle(color: Colors.grey.shade600)),
+          Text('جاري تحميل البيانات...', style: TextStyle(color: colorScheme.onSurfaceVariant)),
         ],
       ),
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(ColorScheme colorScheme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.wifi_off_rounded, size: 64, color: Colors.grey.shade400),
+          Icon(Icons.wifi_off_rounded, size: 64, color: colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
-          Text(
-            _errorMessage!,
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-            textAlign: TextAlign.center,
-          ),
+          Text(_errorMessage!, style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant), textAlign: TextAlign.center),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: _subscribeToCheckpoints,
             icon: const Icon(Icons.refresh),
             label: const Text('إعادة المحاولة'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade700,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMapView() {
-    if (_filteredCheckpoints.isEmpty) 
-      return _buildEmptyState(true);
+  Widget _buildMapView(bool isDark) {
+    if (_filteredCheckpoints.isEmpty) return _buildEmptyState(true);
 
-    return FlutterMap(
+    final tileUrl = isDark
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+    final mapWidget = FlutterMap(
       mapController: _mapController,
       options: MapOptions(
         initialCenter: AppConstants.defaultLocation,
@@ -487,15 +447,102 @@ Widget _buildModernAppBar() {
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.example.checkpoint_app',
+          urlTemplate: tileUrl,
+          subdomains: isDark ? const ['a', 'b', 'c', 'd'] : const [],
+          userAgentPackageName: 'com.msar.checkpoint_app',
           maxNativeZoom: 18,
           keepBuffer: 4,
+          tileProvider: CachedTileProvider(
+            store: TileCacheService.store,
+          ),
         ),
         MarkerLayer(
           markers: _buildMarkers(),
           rotate: false,
         ),
+        if (_userLocation != null)
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: _userLocation!,
+                width: 24,
+                height: 24,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+
+    Widget map = mapWidget;
+    if (isDark) {
+      map = ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          1.3, 0, 0, 0, 30,
+          0, 1.3, 0, 0, 30,
+          0, 0, 1.3, 0, 30,
+          0, 0, 0, 1, 0,
+        ]),
+        child: mapWidget,
+      );
+    }
+
+    return Stack(
+      children: [
+        map,
+        const Positioned(
+          bottom: 16,
+          right: 16,
+          child: MapLegend(),
+        ),
+        Positioned(
+          bottom: 16,
+          left: 16,
+          child: FloatingActionButton.small(
+            heroTag: 'locationFab',
+            onPressed: _onLocationFabPressed,
+            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            child: Icon(
+              _userLocation != null ? Icons.my_location : Icons.location_searching,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ),
+        if (_isOffline)
+          Positioned(
+            top: 8,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.cloud_off, size: 14, color: Theme.of(context).colorScheme.onErrorContainer),
+                    const SizedBox(width: 6),
+                    Text(
+                      'وضع عدم الاتصال — خريطة مخزنة مؤقتاً',
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onErrorContainer),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -518,39 +565,82 @@ Widget _buildModernAppBar() {
   }
 
   Widget _buildEmptyState(bool isMap) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(isMap ? Icons.location_off : Icons.list_alt,
-              size: 64, color: Colors.grey.shade400),
+          Icon(isMap ? Icons.location_off : Icons.list_alt, size: 64, color: colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
           Text(
-            _selectedRegion != null
-                ? 'لا توجد حواجز في منطقة $_selectedRegion'
-                : 'لا توجد حواجز حالياً',
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            _selectedRegion != null ? 'لا توجد حواجز في منطقة $_selectedRegion' : 'لا توجد حواجز حالياً',
+            style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant),
           ),
           if (_selectedRegion != null)
             Padding(
               padding: const EdgeInsets.only(top: 16),
-              child: TextButton.icon(
-                onPressed: () => _selectRegion(null),
-                icon: const Icon(Icons.clear),
-                label: const Text('إزالة الفلتر'),
-              ),
+              child: TextButton.icon(onPressed: () => _selectRegion(null), icon: const Icon(Icons.clear), label: const Text('إزالة الفلتر')),
             ),
         ],
       ),
     );
   }
 
+  Future<void> _onLocationFabPressed() async {
+    final status = await _locationPermService.checkStatus();
+
+    if (status == LocationResult.granted) {
+      await _moveToUserLocation();
+      return;
+    }
+
+    if (!mounted) return;
+
+    final bool proceed = await LocationPermissionSheet.show(
+      context,
+      isDeniedForever: status == LocationResult.deniedForever,
+      isServiceDisabled: status == LocationResult.serviceDisabled,
+    );
+
+    if (!proceed) return;
+
+    if (status == LocationResult.deniedForever) {
+      await _locationPermService.openSettings();
+      return;
+    }
+    if (status == LocationResult.serviceDisabled) {
+      await _locationPermService.openLocationSettings();
+      return;
+    }
+
+    // denied — request system dialog
+    final result = await _locationPermService.request();
+    if (result == LocationResult.granted) {
+      await _moveToUserLocation();
+    }
+  }
+
+  Future<void> _moveToUserLocation() async {
+    try {
+      final pos = await _locationPermService.getPosition();
+      final target = LatLng(pos.latitude, pos.longitude);
+      setState(() => _userLocation = target);
+      _mapController.move(target, 14.0);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر تحديد الموقع. تأكد من تفعيل GPS.')),
+        );
+      }
+    }
+  }
+
   List<Marker> _buildMarkers() {
     return _filteredCheckpoints.map((cp) {
       return Marker(
         point: LatLng(cp.latitude, cp.longitude),
-        width: 110,
-        height: 80,
+        width: 120,
+        height: 76,
         child: CheckpointMarker(
           checkpoint: cp,
           status: _statuses[cp.id],
@@ -561,14 +651,7 @@ Widget _buildModernAppBar() {
   }
 
   void _openDetail(Checkpoint checkpoint) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CheckpointDetailScreen(checkpoint: checkpoint),
-      ),
-    ).then((_) {
-      _refreshStatuses();
-    });
+    Navigator.push(context, MaterialPageRoute(builder: (_) => CheckpointDetailScreen(checkpoint: checkpoint))).then((_) => _refreshStatuses());
   }
 
   void _showAddCheckpointDialog({LatLng? position}) {
@@ -585,24 +668,14 @@ Widget _buildModernAppBar() {
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'اسم الحاجز',
-                  hintText: 'مثال: حاجز قلنديا',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.location_on),
-                ),
+                decoration: const InputDecoration(labelText: 'اسم الحاجز', hintText: 'مثال: حاجز قلنديا', border: OutlineInputBorder(), prefixIcon: Icon(Icons.location_on)),
                 textAlign: TextAlign.right,
                 textDirection: TextDirection.rtl,
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: regionController,
-                decoration: const InputDecoration(
-                  labelText: 'المنطقة',
-                  hintText: 'مثال: رام الله',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.place),
-                ),
+                decoration: const InputDecoration(labelText: 'المنطقة', hintText: 'مثال: رام الله', border: OutlineInputBorder(), prefixIcon: Icon(Icons.place)),
                 textAlign: TextAlign.right,
                 textDirection: TextDirection.rtl,
               ),
@@ -611,7 +684,7 @@ Widget _buildModernAppBar() {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -619,11 +692,7 @@ Widget _buildModernAppBar() {
                     children: [
                       const Text('📍 موقع الحاجز:', style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text(
-                        'خط العرض: ${position.latitude.toStringAsFixed(6)}\n'
-                        'خط الطول: ${position.longitude.toStringAsFixed(6)}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
+                      Text('خط العرض: ${position.latitude.toStringAsFixed(6)}\nخط الطول: ${position.longitude.toStringAsFixed(6)}', style: const TextStyle(fontSize: 12)),
                     ],
                   ),
                 ),
@@ -632,27 +701,17 @@ Widget _buildModernAppBar() {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('إلغاء', style: TextStyle(color: Colors.grey.shade700)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
           ElevatedButton(
             onPressed: () async {
               if (nameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('الرجاء إدخال اسم الحاجز'),
-                  backgroundColor: Colors.orange,
-                ));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء إدخال اسم الحاجز'), backgroundColor: Colors.orange));
                 return;
               }
               if (position == null) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('الرجاء الضغط مطولاً على الخريطة لتحديد موقع الحاجز'),
-                  backgroundColor: Colors.orange,
-                ));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء الضغط مطولاً على الخريطة لتحديد موقع الحاجز'), backgroundColor: Colors.orange));
                 return;
               }
-
               final newCheckpoint = Checkpoint(
                 id: '',
                 name: nameController.text.trim(),
@@ -662,31 +721,18 @@ Widget _buildModernAppBar() {
                 createdBy: _authService.currentUser?.uid,
                 createdAt: DateTime.now(),
               );
-
               try {
                 await _checkpointService.addCheckpoint(newCheckpoint);
                 if (mounted) {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('✓ تم إضافة "${nameController.text.trim()}" بنجاح'),
-                      backgroundColor: Colors.green,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('✓ تم إضافة "${nameController.text.trim()}" بنجاح'), backgroundColor: Colors.green));
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('❌ فشل الإضافة: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ فشل الإضافة: $e'), backgroundColor: Colors.red));
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade700),
             child: const Text('حفظ'),
           ),
         ],

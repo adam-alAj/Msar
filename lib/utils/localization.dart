@@ -53,6 +53,12 @@ class AppLocalizations {
     'minutes_ago': 'دقيقة مضت',
     'now': 'الآن',
     'vote_window_minutes': '60', 
+    'settings': 'الإعدادات',
+    'appearance': 'المظهر',
+    'theme_system': 'تلقائي',
+    'theme_light': 'فاتح',
+    'theme_dark': 'داكن',
+    'theme_system_hint': 'عند اختيار "تلقائي"، يتبع التطبيق إعدادات النظام.',
   };
 
   static String tr(String key) {
