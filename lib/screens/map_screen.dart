@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cache/flutter_map_cache.dart';
@@ -18,6 +19,7 @@ import '../utils/constants.dart';
 import '../utils/localization.dart';
 import '../widgets/checkpoint_marker.dart';
 import '../widgets/checkpoint_card.dart';
+import '../widgets/freshness_indicator.dart';
 import '../widgets/map_legend.dart';
 import '../widgets/location_permission_sheet.dart';
 import 'checkpoint_detail_screen.dart';
@@ -32,7 +34,7 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final CheckpointService _checkpointService = CheckpointService();
   final AuthService _authService = AuthService();
 
@@ -57,12 +59,19 @@ class _MapScreenState extends State<MapScreen>
   bool _isOffline = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Auto-refresh state
+  Timer? _autoRefreshTimer;
+  DateTime? _lastStatusUpdate;
+  int _offlineSkipCount = 0;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 2, vsync: this);
     _checkAdmin();
     _subscribeToCheckpoints();
+    _startAutoRefresh();
     _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
       final offline = results.every((r) => r == ConnectivityResult.none);
       if (offline != _isOffline) setState(() => _isOffline = offline);
@@ -127,11 +136,125 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoRefreshTimer?.cancel();
     _checkpointSub?.cancel();
     _connectivitySub?.cancel();
     _tabController.dispose();
     try { context.read<GovernorateProvider>().removeListener(_onGovernorateChanged); } catch (_) {}
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _autoRefreshTimer?.cancel();
+      _autoRefreshTimer = null;
+    } else if (state == AppLifecycleState.resumed) {
+      _startAutoRefresh();
+      // Immediate refresh on resume if stale (>5 min)
+      if (_lastStatusUpdate != null &&
+          DateTime.now().difference(_lastStatusUpdate!).inMinutes >= 5) {
+        _serverRefreshWithDiff();
+      }
+    }
+  }
+
+  void _startAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) => _onAutoRefreshTick());
+  }
+
+  void _onAutoRefreshTick() {
+    if (_isOffline) {
+      _offlineSkipCount++;
+      debugPrint('⏭ Auto-refresh skipped (offline, count: $_offlineSkipCount)');
+      return;
+    }
+    _serverRefreshWithDiff();
+  }
+
+  /// Pull-to-refresh handler: forces server source, shows offline message if needed.
+  Future<void> _pullToRefresh() async {
+    if (_isOffline) {
+      if (!mounted) return;
+      final staleness = _lastStatusUpdate != null
+          ? DateTime.now().difference(_lastStatusUpdate!).inMinutes
+          : 0;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('لا يوجد اتصال — البيانات المحفوظة منذ $staleness دقيقة')),
+      );
+      return;
+    }
+    await _serverRefreshWithDiff();
+  }
+
+  /// Server-source refresh with smart diffing for change notifications.
+  Future<void> _serverRefreshWithDiff() async {
+    if (_allCheckpoints.isEmpty || !mounted) return;
+    setState(() => _isLoadingStatuses = true);
+    try {
+      final ids = _allCheckpoints.map((c) => c.id).toList();
+      final newStatuses = await _checkpointService.getAllCheckpointStatuses(
+        ids,
+        options: const GetOptions(source: Source.server),
+      );
+      if (!mounted) return;
+
+      // Smart diff: detect changes
+      final changes = <String>[];
+      newStatuses.forEach((id, newStatus) {
+        final old = _statuses[id];
+        if (old == null) return;
+        if (old.entrance.status != newStatus.entrance.status ||
+            old.exit.status != newStatus.exit.status) {
+          final cp = _allCheckpoints.where((c) => c.id == id).firstOrNull;
+          if (cp != null) {
+            final dir = old.entrance.status != newStatus.entrance.status ? 'داخل' : 'خارج';
+            final newSt = old.entrance.status != newStatus.entrance.status
+                ? _localizeStatus(newStatus.entrance.status)
+                : _localizeStatus(newStatus.exit.status);
+            changes.add('${cp.name} ($dir) → $newSt');
+          }
+        }
+      });
+
+      setState(() {
+        _statuses = newStatuses;
+        _isLoadingStatuses = false;
+        _lastStatusUpdate = DateTime.now();
+        _offlineSkipCount = 0;
+      });
+
+      // Show change notification only if there are actual changes
+      if (changes.isNotEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.notifications_active, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text('تغيّر: ${changes.first}', style: const TextStyle(fontSize: 13))),
+              ],
+            ),
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('🔴 Server refresh failed: $e');
+      if (mounted) setState(() => _isLoadingStatuses = false);
+    }
+  }
+
+  String _localizeStatus(String status) {
+    switch (status) {
+      case 'OPEN': return 'سالك';
+      case 'CROWDED': return 'أزمة';
+      case 'CLOSED': return 'مغلق';
+      default: return status;
+    }
   }
 
   void _checkAdmin() async {
@@ -183,6 +306,7 @@ class _MapScreenState extends State<MapScreen>
         setState(() {
           _statuses = statuses;
           _isLoadingStatuses = false;
+          _lastStatusUpdate = DateTime.now();
         });
       }
     } catch (e) {
@@ -212,7 +336,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _refreshStatuses() async {
-    await _loadAllStatuses(_allCheckpoints.map((c) => c.id).toList());
+    await _serverRefreshWithDiff();
   }
 
   void _openDrawer() {
@@ -383,6 +507,11 @@ class _MapScreenState extends State<MapScreen>
                       const SizedBox(width: 3),
                       Text('تحديث', style: TextStyle(fontSize: 9, color: colorScheme.primary)),
                     ],
+                  )
+                else
+                  FreshnessIndicator(
+                    lastUpdated: _lastStatusUpdate,
+                    onTap: _pullToRefresh,
                   ),
               ],
             ),
@@ -633,17 +762,22 @@ class _MapScreenState extends State<MapScreen>
       });
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: sorted.length,
-      itemBuilder: (context, index) {
-        final cp = sorted[index];
-        return CheckpointCard(
-          checkpoint: cp,
-          status: _statuses[cp.id],
-          onTap: () => _openDetail(cp),
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: _pullToRefresh,
+      color: Theme.of(context).colorScheme.primary,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: sorted.length,
+        itemBuilder: (context, index) {
+          final cp = sorted[index];
+          return CheckpointCard(
+            checkpoint: cp,
+            status: _statuses[cp.id],
+            onTap: () => _openDetail(cp),
+          );
+        },
+      ),
     );
   }
 

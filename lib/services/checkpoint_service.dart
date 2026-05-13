@@ -43,7 +43,7 @@ class CheckpointService {
   // ─── FIXED: GetAllCheckpointStatuses - Using correct query ───────────────
   
   Future<Map<String, CheckpointStatus>> getAllCheckpointStatuses(
-      List<String> checkpointIds) async {
+      List<String> checkpointIds, {GetOptions? options}) async {
     if (checkpointIds.isEmpty) return {};
 
     final cutoff = DateTime.now().subtract(
@@ -53,7 +53,7 @@ class CheckpointService {
     // FIX: Query without timestamp filter first to avoid index issues
     final snapshot = await _firestore
         .collection(AppConstants.votesCollection)
-        .get();
+        .get(options ?? const GetOptions());
     
     // Filter in memory instead of using where clause
     final allVotes = snapshot.docs
