@@ -20,6 +20,7 @@ import '../utils/localization.dart';
 import '../utils/neu_glass.dart';
 import '../widgets/checkpoint_marker.dart';
 import '../widgets/checkpoint_card.dart';
+import '../widgets/empty_state_view.dart';
 import '../widgets/freshness_indicator.dart';
 import '../widgets/map_legend.dart';
 import '../widgets/skeleton_loaders.dart';
@@ -783,24 +784,8 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Widget _buildEmptyState(bool isMap) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(isMap ? Icons.location_off : Icons.list_alt, size: 64, color: colorScheme.onSurfaceVariant),
-          const SizedBox(height: 16),
-          Text(
-            _selectedRegion != null ? 'لا توجد حواجز في منطقة $_selectedRegion' : 'لا توجد حواجز حالياً',
-            style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant),
-          ),
-          if (_selectedRegion != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: TextButton.icon(onPressed: () => _selectRegion(null), icon: const Icon(Icons.clear), label: const Text('إزالة الفلتر')),
-            ),
-        ],
-      ),
+    return EmptyStateView.noCheckpoints(
+      onClearFilter: _selectedRegion != null ? () => _selectRegion(null) : null,
     );
   }
 
