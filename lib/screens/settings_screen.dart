@@ -25,33 +25,19 @@ class SettingsScreen extends StatelessWidget {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colorScheme.primary),
           ),
           const SizedBox(height: 12),
-          SegmentedButton<AppThemeMode>(
-            segments: const [
-              ButtonSegment(
-                value: AppThemeMode.autoSolar,
-                icon: Icon(AppIcons.themeSolar),
-                label: Text('شمسي'),
-              ),
-              ButtonSegment(
-                value: AppThemeMode.system,
-                icon: Icon(AppIcons.themeSystem),
-                label: Text('نظام'),
-              ),
-              ButtonSegment(
-                value: AppThemeMode.light,
-                icon: Icon(AppIcons.themeLight),
-                label: Text('فاتح'),
-              ),
-              ButtonSegment(
-                value: AppThemeMode.dark,
-                icon: Icon(AppIcons.themeDark),
-                label: Text('داكن'),
-              ),
+          GridView.count(
+            crossAxisCount: 4,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 1,
+            children: [
+              _ThemeTile(icon: AppIcons.themeSolar, label: 'شمس', selected: themeProvider.mode == AppThemeMode.autoSolar, onTap: () => themeProvider.setMode(AppThemeMode.autoSolar)),
+              _ThemeTile(icon: AppIcons.themeSystem, label: 'نظام', selected: themeProvider.mode == AppThemeMode.system, onTap: () => themeProvider.setMode(AppThemeMode.system)),
+              _ThemeTile(icon: AppIcons.themeLight, label: 'فاتح', selected: themeProvider.mode == AppThemeMode.light, onTap: () => themeProvider.setMode(AppThemeMode.light)),
+              _ThemeTile(icon: AppIcons.themeDark, label: 'داكن', selected: themeProvider.mode == AppThemeMode.dark, onTap: () => themeProvider.setMode(AppThemeMode.dark)),
             ],
-            selected: {themeProvider.mode},
-            onSelectionChanged: (modes) {
-              themeProvider.setMode(modes.first);
-            },
           ),
           const SizedBox(height: 8),
           if (themeProvider.mode == AppThemeMode.autoSolar && themeProvider.sunset != null)
@@ -112,5 +98,42 @@ class SettingsScreen extends StatelessWidget {
     final period = h >= 12 ? 'م' : 'ص';
     final hour12 = h > 12 ? h - 12 : (h == 0 ? 12 : h);
     return '$hour12:$m $period';
+  }
+}
+
+
+class _ThemeTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ThemeTile({required this.icon, required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: selected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? colorScheme.primary : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 24, color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant),
+            const SizedBox(height: 6),
+            Text(label, style: TextStyle(fontSize: 11, fontWeight: selected ? FontWeight.bold : FontWeight.normal, color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant)),
+          ],
+        ),
+      ),
+    );
   }
 }

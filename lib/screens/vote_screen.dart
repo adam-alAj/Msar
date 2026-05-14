@@ -313,7 +313,6 @@ class _VoteScreenState extends State<VoteScreen> {
           await Future.delayed(const Duration(milliseconds: 2800));
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Row(children: [Icon(AppIcons.checkpointOpen, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('✓ تم تسجيل تصويتك بنجاح! شكراً لمشاركتك'))]), backgroundColor: Colors.green.shade700, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
           Navigator.pop(context, true);
         }
       }

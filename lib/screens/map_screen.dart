@@ -523,26 +523,7 @@ class _MapScreenState extends State<MapScreen>
               ],
             ),
           ),
-          if (_selectedRegion != null)
-            Flexible(
-              child: Container(
-                margin: const EdgeInsets.only(right: 4),
-                child: Chip(
-                  avatar: const Icon(AppIcons.gpsFixed, size: 12),
-                  label: Text('تعرض: $_selectedRegion', style: const TextStyle(fontSize: 10)),
-                  deleteIcon: const Icon(AppIcons.close, size: 12),
-                  onDeleted: () {
-                    _selectRegion(null);
-                    context.read<GovernorateProvider>().setManual(null);
-                    try { _mapController.move(AppConstants.defaultLocation, AppConstants.defaultZoom); } catch (_) {}
-                  },
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
-            ),
+
           IconButton(
             icon: const Icon(AppIcons.refresh, size: 20),
             onPressed: _isLoadingStatuses ? null : _refreshStatuses,
@@ -695,6 +676,28 @@ class _MapScreenState extends State<MapScreen>
     return Stack(
       children: [
         map,
+        if (_selectedRegion != null)
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Material(
+              elevation: 2,
+              borderRadius: BorderRadius.circular(20),
+              child: Chip(
+                avatar: Icon(AppIcons.gpsFixed, size: 14, color: Theme.of(context).colorScheme.primary),
+                label: Text(_selectedRegion!, style: const TextStyle(fontSize: 12)),
+                deleteIcon: const Icon(AppIcons.close, size: 14),
+                onDeleted: () {
+                  _selectRegion(null);
+                  context.read<GovernorateProvider>().setManual(null);
+                  try { _mapController.move(AppConstants.defaultLocation, AppConstants.defaultZoom); } catch (_) {}
+                },
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+            ),
+          ),
         const Positioned(
           bottom: 16,
           right: 16,

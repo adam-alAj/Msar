@@ -175,9 +175,14 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
           const SizedBox(height: 20),
           _buildSectionHeader('الحالة الحالية', colorScheme),
           const SizedBox(height: 12),
-          DirectionStatusCard(title: AppLocalizations.tr('entrance'), status: status.entrance, icon: AppIcons.arrowForward, onVotePressed: () => _handleVote(context)),
-          const SizedBox(height: 16),
-          DirectionStatusCard(title: AppLocalizations.tr('exit'), status: status.exit, icon: AppIcons.arrowBack, onVotePressed: () => _handleVote(context)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: DirectionStatusCard(title: AppLocalizations.tr('entrance'), status: status.entrance, icon: AppIcons.arrowForward, onVotePressed: () => _handleVote(context), compact: true)),
+              const SizedBox(width: 10),
+              Expanded(child: DirectionStatusCard(title: AppLocalizations.tr('exit'), status: status.exit, icon: AppIcons.arrowBack, onVotePressed: () => _handleVote(context), compact: true)),
+            ],
+          ),
           const SizedBox(height: 20),
           _buildVotingInfoCard(colorScheme),
           const SizedBox(height: 20),
@@ -294,7 +299,15 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
     Position? position;
     try { position = await _locationService.getCurrentPosition(); } catch (_) {}
 
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => VoteScreen(checkpoint: widget.checkpoint, userPosition: position)));
+    final voted = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => VoteScreen(checkpoint: widget.checkpoint, userPosition: position)));
+    if (voted == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Row(children: [Icon(AppIcons.checkpointOpen, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('✓ تم تسجيل تصويتك بنجاح! شكراً لمشاركتك'))]),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
   }
 
   String _formatTimeAgo(DateTime dateTime) {
