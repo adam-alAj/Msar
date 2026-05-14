@@ -9,6 +9,7 @@ import '../utils/app_icons.dart';
 import '../utils/constants.dart';
 import '../utils/localization.dart';
 import '../widgets/skeleton_loaders.dart';
+import '../widgets/comments_section.dart';
 import 'vote_screen.dart';
 
 class CheckpointDetailScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
 
   late Stream<CheckpointStatus> _statusStream;
   late AnimationController _pulseController;
+  final GlobalKey<CommentsSectionState> _commentsKey = GlobalKey<CommentsSectionState>();
 
   @override
   void initState() {
@@ -186,6 +188,9 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
           const SizedBox(height: 20),
           // Info section
           _buildInfoSection(colorScheme),
+          const SizedBox(height: 20),
+          // Comments feed
+          CommentsSection(key: _commentsKey, checkpointId: widget.checkpoint.id),
           const SizedBox(height: 16),
         ],
       ),
@@ -424,6 +429,7 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
 
     final voted = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => VoteScreen(checkpoint: widget.checkpoint, userPosition: position)));
     if (voted == true && mounted) {
+      _commentsKey.currentState?.refresh();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Row(children: [Icon(AppIcons.checkpointOpen, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('✓ تم تسجيل تصويتك بنجاح! شكراً لمشاركتك'))]),
         backgroundColor: Colors.green.shade700,

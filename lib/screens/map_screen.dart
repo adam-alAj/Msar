@@ -17,10 +17,9 @@ import '../services/location_permission_service.dart';
 import '../services/tile_cache_service.dart';
 import '../utils/app_icons.dart';
 import '../utils/constants.dart';
-import '../utils/localization.dart';
-import '../utils/neu_glass.dart';
 import '../widgets/checkpoint_marker.dart';
 import '../widgets/checkpoint_card.dart';
+import '../widgets/checkpoint_search_bar.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/freshness_indicator.dart';
 import '../widgets/map_legend.dart';
@@ -63,6 +62,9 @@ class _MapScreenState extends State<MapScreen>
   bool _isOffline = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Search state
+  String _searchQuery = '';
+
   // Auto-refresh state
   Timer? _autoRefreshTimer;
   DateTime? _lastStatusUpdate;
@@ -98,7 +100,12 @@ class _MapScreenState extends State<MapScreen>
   void _onGovernorateChanged() {
     if (!mounted) return;
     final govProvider = context.read<GovernorateProvider>();
+    // Only apply defaults on first detection
     _applyGovernorateDefaults(govProvider);
+    // Always update user location for the blue dot
+    if (govProvider.userPosition != null && govProvider.userPosition != _userLocation) {
+      setState(() => _userLocation = govProvider.userPosition);
+    }
     // Show boundary crossing prompt
     if (govProvider.pendingBoundaryCrossing != null) {
       _showBoundaryCrossingPrompt(govProvider);
@@ -106,7 +113,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _applyGovernorateDefaults(GovernorateProvider govProvider) {
-    if (_governorateInitialized && _selectedRegion != null) return;
+    if (_governorateInitialized) return;
     final gov = govProvider.current;
     if (gov == null) return;
     _governorateInitialized = true;
@@ -477,103 +484,118 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Widget _buildModernAppBar(ColorScheme colorScheme, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Column(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: IconButton(
-              icon: const Icon(AppIcons.location, size: 20),
-              onPressed: _openDrawer,
-              color: colorScheme.primary,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  AppLocalizations.tr('مسار'),
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colorScheme.primary),
-                ),
-                if (_isLoadingStatuses)
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 8, height: 8,
-                        child: CircularProgressIndicator(strokeWidth: 1.5, valueColor: AlwaysStoppedAnimation(colorScheme.primary)),
-                      ),
-                      const SizedBox(width: 3),
-                      Text('تحديث', style: TextStyle(fontSize: 9, color: colorScheme.primary)),
-                    ],
-                  )
-                else
-                  FreshnessIndicator(
-                    lastUpdated: _lastStatusUpdate,
-                    onTap: _pullToRefresh,
+          // Top row: app name + actions
+          Row(
+            children: [
+              GestureDetector(
+                onTap: _openDrawer,
+                child: Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(11),
                   ),
-              ],
-            ),
+                  child: Icon(AppIcons.location, size: 18, color: colorScheme.primary),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('مسار', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: colorScheme.onSurface, letterSpacing: -0.3)),
+                    if (_isLoadingStatuses)
+                      Row(children: [
+                        SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 1.5, valueColor: AlwaysStoppedAnimation(colorScheme.primary))),
+                        const SizedBox(width: 4),
+                        Text('جارٍ التحديث...', style: TextStyle(fontSize: 10, color: colorScheme.primary)),
+                      ])
+                    else
+                      FreshnessIndicator(lastUpdated: _lastStatusUpdate, onTap: _pullToRefresh),
+                  ],
+                ),
+              ),
+              _buildActionIcon(AppIcons.refresh, _isLoadingStatuses ? null : _refreshStatuses, colorScheme),
+              const SizedBox(width: 6),
+              _buildActionIcon(AppIcons.settings, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())), colorScheme),
+              const SizedBox(width: 6),
+              _buildActionIcon(AppIcons.logout, () async {
+                await _authService.signOut();
+                if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+              }, colorScheme),
+            ],
           ),
-
-          IconButton(
-            icon: const Icon(AppIcons.refresh, size: 20),
-            onPressed: _isLoadingStatuses ? null : _refreshStatuses,
-            color: colorScheme.primary,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          ),
-          IconButton(
-            icon: const Icon(AppIcons.settings, size: 20),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
-            color: colorScheme.primary,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          ),
-          IconButton(
-            icon: const Icon(AppIcons.logout, size: 20),
-            onPressed: () async {
-              await _authService.signOut();
-              if (mounted) {
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
-              }
-            },
-            color: colorScheme.primary,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          const SizedBox(height: 10),
+          // Search bar
+          CheckpointSearchBar(
+            mode: _selectedTabIndex == 0 ? SearchMode.map : SearchMode.list,
+            checkpoints: _allCheckpoints,
+            statuses: _statuses,
+            onChanged: (query) => setState(() => _searchQuery = query),
+            onCheckpointSelected: _onSearchCheckpointSelected,
+            onClear: () => setState(() => _searchQuery = ''),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildActionIcon(IconData icon, VoidCallback? onTap, ColorScheme colorScheme) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34, height: 34,
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 17, color: onTap == null ? colorScheme.onSurfaceVariant.withOpacity(0.4) : colorScheme.onSurfaceVariant),
+      ),
+    );
+  }
+
+  void _onSearchCheckpointSelected(Checkpoint cp) {
+    // Fly to checkpoint on map
+    try {
+      _mapController.move(LatLng(cp.latitude, cp.longitude), 14.5);
+    } catch (_) {}
+    // Switch to map tab if on list
+    if (_selectedTabIndex != 0) {
+      _tabController.animateTo(0);
+      setState(() => _selectedTabIndex = 0);
+    }
+  }
+
   Widget _buildTabBar(ColorScheme colorScheme, bool isDark) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: NeuDecoration.box(context, radius: 30),
+      height: 42,
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: TabBar(
         controller: _tabController,
         onTap: (i) => setState(() => _selectedTabIndex = i),
         indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
           color: colorScheme.primary,
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(12),
         ),
         labelColor: colorScheme.onPrimary,
         unselectedLabelColor: colorScheme.onSurfaceVariant,
-        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
         dividerColor: Colors.transparent,
+        indicatorPadding: const EdgeInsets.all(3),
         tabs: const [
-          Tab(icon: Icon(AppIcons.map), text: 'الخريطة'),
-          Tab(icon: Icon(AppIcons.list), text: 'القائمة'),
+          Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(AppIcons.map, size: 16), SizedBox(width: 6), Text('الخريطة')])),
+          Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(AppIcons.list, size: 16), SizedBox(width: 6), Text('القائمة')])),
         ],
       ),
     );
@@ -747,10 +769,20 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Widget _buildListView() {
-    if (_filteredCheckpoints.isEmpty) return _buildEmptyState(false);
+    if (_filteredCheckpoints.isEmpty && _searchQuery.isEmpty) return _buildEmptyState(false);
 
-    // Sort by haversine distance (nearest first) when user location available
-    final sorted = List<Checkpoint>.from(_filteredCheckpoints);
+    // Apply search filter
+    final searchFiltered = _searchQuery.isEmpty
+        ? _filteredCheckpoints
+        : _filteredCheckpoints.where((cp) => cp.name.contains(_searchQuery) || cp.region.contains(_searchQuery)).toList();
+
+    // Empty search results
+    if (searchFiltered.isEmpty && _searchQuery.isNotEmpty) {
+      return EmptyStateView.noSearchResults(_searchQuery);
+    }
+
+    // Sort by distance
+    final sorted = List<Checkpoint>.from(searchFiltered);
     if (_userLocation != null) {
       sorted.sort((a, b) {
         final dA = _haversineKm(_userLocation!.latitude, _userLocation!.longitude, a.latitude, a.longitude);
