@@ -6,8 +6,8 @@ import '../services/checkpoint_service.dart';
 import '../services/location_service.dart';
 import '../services/auth_service.dart';
 import '../utils/app_icons.dart';
+import '../utils/constants.dart';
 import '../utils/localization.dart';
-import '../widgets/direction_status_card.dart';
 import '../widgets/skeleton_loaders.dart';
 import 'vote_screen.dart';
 
@@ -20,17 +20,29 @@ class CheckpointDetailScreen extends StatefulWidget {
   State<CheckpointDetailScreen> createState() => _CheckpointDetailScreenState();
 }
 
-class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
+class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
+    with SingleTickerProviderStateMixin {
   final CheckpointService _checkpointService = CheckpointService();
   final LocationService _locationService = LocationService();
   final AuthService _authService = AuthService();
 
   late Stream<CheckpointStatus> _statusStream;
+  late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
     _statusStream = _checkpointService.watchCheckpointStatus(widget.checkpoint.id);
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   @override
@@ -38,115 +50,353 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: Container(
-        color: colorScheme.surface,
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildModernAppBar(colorScheme),
-              Expanded(
-                child: StreamBuilder<CheckpointStatus>(
-                  stream: _statusStream,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) return _buildLoadingState();
-                    if (snapshot.hasError) return _buildErrorState(snapshot.error, colorScheme);
-                    if (!snapshot.hasData) return _buildNoDataState(colorScheme);
-                    return _buildContent(context, snapshot.data!, colorScheme);
-                  },
-                ),
+      backgroundColor: colorScheme.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildAppBar(colorScheme),
+            Expanded(
+              child: StreamBuilder<CheckpointStatus>(
+                stream: _statusStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) return _buildLoadingState();
+                  if (snapshot.hasError) return _buildErrorState(snapshot.error, colorScheme);
+                  if (!snapshot.hasData) return _buildNoDataState(colorScheme);
+                  return _buildContent(snapshot.data!, colorScheme);
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: _buildVoteButton(colorScheme),
     );
   }
 
-  Widget _buildModernAppBar(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        boxShadow: [BoxShadow(color: colorScheme.shadow.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
+  // ─── APP BAR ────────────────────────────────────────────────────────────────
+
+  Widget _buildAppBar(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Row(
         children: [
-          Hero(
-            tag: 'cp-icon-${widget.checkpoint.id}',
+          // Back button
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
             child: Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(color: colorScheme.primaryContainer, borderRadius: BorderRadius.circular(10)),
-              child: Icon(AppIcons.location, color: colorScheme.primary, size: 20),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            decoration: BoxDecoration(color: colorScheme.primaryContainer, borderRadius: BorderRadius.circular(12)),
-            child: IconButton(
-              icon: const Icon(AppIcons.backNav),
-              onPressed: () => Navigator.pop(context),
-              color: colorScheme.primary,
-              iconSize: 18,
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(AppIcons.backNav, size: 18, color: colorScheme.onSurface),
             ),
           ),
           const SizedBox(width: 12),
+          // Title
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Hero(
-                  tag: 'cp-name-${widget.checkpoint.id}',
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Text(widget.checkpoint.name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colorScheme.onSurface), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ),
+                Text(
+                  widget.checkpoint.name,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: colorScheme.onSurface, letterSpacing: -0.3),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Hero(
-                  tag: 'cp-region-${widget.checkpoint.id}',
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(AppIcons.place, size: 12, color: colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 2),
-                      Text(widget.checkpoint.region, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
-                    ]),
-                  ),
-                ),
+                const SizedBox(height: 2),
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(AppIcons.place, size: 12, color: colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Text(widget.checkpoint.region, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
+                ]),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 6, height: 6, decoration: BoxDecoration(color: colorScheme.primary, shape: BoxShape.circle)),
-              const SizedBox(width: 4),
-              Text('مباشر', style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.w600)),
-            ]),
+          // Live badge with pulse
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) {
+              final opacity = 0.6 + (_pulseController.value * 0.4);
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Container(
+                    width: 7, height: 7,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withOpacity(opacity),
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: colorScheme.primary.withOpacity(opacity * 0.5), blurRadius: 4)],
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text('مباشر', style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.w700)),
+                ]),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLoadingState() {
-    return const CheckpointDetailSkeleton();
+  // ─── CONTENT ────────────────────────────────────────────────────────────────
+
+  Widget _buildContent(CheckpointStatus status, ColorScheme colorScheme) {
+    final totalVotes = status.entrance.totalVotes + status.exit.totalVotes;
+    final lastUpdate = status.entrance.lastUpdated.isAfter(status.exit.lastUpdated)
+        ? status.entrance.lastUpdated
+        : status.exit.lastUpdated;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+          // Stats row
+          _buildStatsRow(totalVotes, lastUpdate, colorScheme),
+          const SizedBox(height: 20),
+          // Direction cards side by side
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(child: _buildDirectionCard(
+                  title: AppLocalizations.tr('entrance'),
+                  icon: AppIcons.arrowForward,
+                  status: status.entrance,
+                  accentColor: const Color(0xFF26A69A), // teal for inbound
+                  colorScheme: colorScheme,
+                )),
+                const SizedBox(width: 12),
+                Expanded(child: _buildDirectionCard(
+                  title: AppLocalizations.tr('exit'),
+                  icon: AppIcons.arrowBack,
+                  status: status.exit,
+                  accentColor: const Color(0xFF7E57C2), // purple for outbound
+                  colorScheme: colorScheme,
+                )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Info section
+          _buildInfoSection(colorScheme),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
   }
+
+  // ─── STATS ROW ──────────────────────────────────────────────────────────────
+
+  Widget _buildStatsRow(int totalVotes, DateTime lastUpdate, ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [colorScheme.primary.withOpacity(0.15), colorScheme.primary.withOpacity(0.05)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          // Total votes
+          Icon(AppIcons.voteOutlined, size: 18, color: colorScheme.primary),
+          const SizedBox(width: 8),
+          Text('$totalVotes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: colorScheme.primary)),
+          const SizedBox(width: 4),
+          Text('صوت', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
+          const Spacer(),
+          // Last update
+          Icon(AppIcons.clock, size: 14, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 4),
+          Text(_formatTimeAgo(lastUpdate), style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  // ─── DIRECTION CARD ─────────────────────────────────────────────────────────
+
+  Widget _buildDirectionCard({
+    required String title,
+    required IconData icon,
+    required DirectionStatus status,
+    required Color accentColor,
+    required ColorScheme colorScheme,
+  }) {
+    final statusColor = AppConstants.statusColorFor(context, status.status);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accentColor.withOpacity(0.25)),
+      ),
+      child: Column(
+        children: [
+          // Direction label
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 14, color: accentColor),
+            ),
+            const SizedBox(width: 6),
+            Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+          ]),
+          const SizedBox(height: 12),
+
+          // Status indicator — the hero element
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: statusColor.withOpacity(0.4), width: 1.5),
+            ),
+            child: Column(children: [
+              Icon(
+                status.status == 'OPEN' ? AppIcons.checkpointOpen
+                    : status.status == 'CROWDED' ? AppIcons.checkpointCrowded
+                    : AppIcons.checkpointClosed,
+                size: 22,
+                color: statusColor,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                status.localizedStatus,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: statusColor),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 10),
+
+          // Progress bar
+          if (status.totalVotes > 0) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: status.percentage / 100,
+                backgroundColor: statusColor.withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation(statusColor),
+                minHeight: 4,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          // Meta
+          Text(
+            '${status.totalVotes} ${AppLocalizations.tr('votes')}',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 2),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(AppIcons.clock, size: 10, color: colorScheme.onSurfaceVariant),
+            const SizedBox(width: 3),
+            Text(_formatTimeAgo(status.lastUpdated), style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant)),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  // ─── INFO SECTION ───────────────────────────────────────────────────────────
+
+  Widget _buildInfoSection(ColorScheme colorScheme) {
+    final items = [
+      (AppIcons.globe, 'يمكنك التصويت من أي مكان'),
+      (AppIcons.voteOutlined, 'الحالة تعتمد على نسبة التصويتات الأعلى'),
+      (AppIcons.clock, 'تُحتسب أصوات آخر ${AppLocalizations.tr('vote_window_minutes')} دقيقة فقط'),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(AppIcons.info, size: 16, color: colorScheme.primary),
+            const SizedBox(width: 6),
+            Text('معلومات التصويت', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colorScheme.primary)),
+          ]),
+          const SizedBox(height: 10),
+          ...items.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(item.$1, size: 14, color: colorScheme.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Expanded(child: Text(item.$2, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant, height: 1.4))),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  // ─── VOTE BUTTON ────────────────────────────────────────────────────────────
+
+  Widget _buildVoteButton(ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 56),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(top: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.2))),
+      ),
+      child: ElevatedButton(
+        onPressed: () => _handleVote(context),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 0,
+        ),
+        child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(AppIcons.vote, size: 20),
+          SizedBox(width: 10),
+          Text('تصويت', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        ]),
+      ),
+    );
+  }
+
+  // ─── STATES ─────────────────────────────────────────────────────────────────
+
+  Widget _buildLoadingState() => const CheckpointDetailSkeleton();
 
   Widget _buildErrorState(Object? error, ColorScheme colorScheme) {
     return Center(
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(AppIcons.error, size: 64, color: colorScheme.error),
+        Icon(AppIcons.error, size: 48, color: colorScheme.error),
         const SizedBox(height: 16),
-        Text('حدث خطأ في تحميل البيانات', style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant)),
+        Text('فشل تحميل البيانات', style: TextStyle(fontSize: 15, color: colorScheme.onSurfaceVariant)),
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: () => setState(() { _statusStream = _checkpointService.watchCheckpointStatus(widget.checkpoint.id); }),
-          icon: const Icon(AppIcons.refresh),
+          icon: const Icon(AppIcons.refresh, size: 18),
           label: const Text('إعادة المحاولة'),
         ),
       ]),
@@ -156,143 +406,16 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
   Widget _buildNoDataState(ColorScheme colorScheme) {
     return Center(
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(AppIcons.info, size: 64, color: colorScheme.onSurfaceVariant),
+        Icon(AppIcons.info, size: 48, color: colorScheme.onSurfaceVariant),
         const SizedBox(height: 16),
-        Text('لا توجد بيانات حالياً', style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant)),
+        Text('لا توجد بيانات حالياً', style: TextStyle(fontSize: 15, color: colorScheme.onSurfaceVariant)),
         const SizedBox(height: 16),
-        ElevatedButton.icon(onPressed: () => _handleVote(context), icon: const Icon(AppIcons.vote), label: const Text('كن أول من يصوّت')),
+        ElevatedButton.icon(onPressed: () => _handleVote(context), icon: const Icon(AppIcons.vote, size: 18), label: const Text('كن أول من يصوّت')),
       ]),
     );
   }
 
-  Widget _buildContent(BuildContext context, CheckpointStatus status, ColorScheme colorScheme) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildHeroStatsCard(status, colorScheme),
-          const SizedBox(height: 20),
-          _buildSectionHeader('الحالة الحالية', colorScheme),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: DirectionStatusCard(title: AppLocalizations.tr('entrance'), status: status.entrance, icon: AppIcons.arrowForward, onVotePressed: () => _handleVote(context), compact: true)),
-              const SizedBox(width: 10),
-              Expanded(child: DirectionStatusCard(title: AppLocalizations.tr('exit'), status: status.exit, icon: AppIcons.arrowBack, onVotePressed: () => _handleVote(context), compact: true)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildVotingInfoCard(colorScheme),
-          const SizedBox(height: 20),
-          _buildLastUpdateInfo(status, colorScheme),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeroStatsCard(CheckpointStatus status, ColorScheme colorScheme) {
-    final totalVotes = status.entrance.totalVotes + status.exit.totalVotes;
-    final lastUpdate = status.entrance.lastUpdated.isAfter(status.exit.lastUpdated) ? status.entrance.lastUpdated : status.exit.lastUpdated;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colorScheme.primary,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: colorScheme.primary.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildStatItem('إجمالي التصويتات', totalVotes.toString(), AppIcons.voteOutlined, colorScheme),
-          Container(width: 1, height: 40, color: colorScheme.onPrimary.withOpacity(0.3)),
-          _buildStatItem('آخر تحديث', _formatTimeAgo(lastUpdate), AppIcons.clock, colorScheme),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, IconData icon, ColorScheme colorScheme) {
-    return Column(children: [
-      Icon(icon, color: colorScheme.onPrimary, size: 22),
-      const SizedBox(height: 6),
-      Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colorScheme.onPrimary)),
-      const SizedBox(height: 2),
-      Text(label, style: TextStyle(fontSize: 11, color: colorScheme.onPrimary.withOpacity(0.8))),
-    ]);
-  }
-
-  Widget _buildSectionHeader(String title, ColorScheme colorScheme) {
-    return Row(children: [
-      Container(width: 4, height: 24, decoration: BoxDecoration(color: colorScheme.primary, borderRadius: BorderRadius.circular(2))),
-      const SizedBox(width: 12),
-      Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
-    ]);
-  }
-
-  Widget _buildVotingInfoCard(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(AppIcons.vote, size: 20, color: colorScheme.primary),
-          const SizedBox(width: 8),
-          Text('معلومات التصويت', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colorScheme.primary)),
-        ]),
-        const SizedBox(height: 12),
-        Text(
-          '• يمكنك التصويت من أي مكان\n• الحالة تعتمد على نسبة التصويتات الأعلى\n• صوتك يساعد الآخرين في معرفة حالة الحاجز\n• تُحتسب أصوات آخر ${AppLocalizations.tr('vote_window_minutes')} دقيقة فقط',
-          style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant, height: 1.5),
-        ),
-      ]),
-    );
-  }
-
-  Widget _buildLastUpdateInfo(CheckpointStatus status, ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(12)),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Row(children: [
-          Icon(AppIcons.clock, size: 16, color: colorScheme.onSurfaceVariant),
-          const SizedBox(width: 4),
-          Text('للداخل: ${_formatTimeAgo(status.entrance.lastUpdated)}', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
-        ]),
-        Row(children: [
-          Icon(AppIcons.clock, size: 16, color: colorScheme.onSurfaceVariant),
-          const SizedBox(width: 4),
-          Text('للخارج: ${_formatTimeAgo(status.exit.lastUpdated)}', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
-        ]),
-      ]),
-    );
-  }
-
-  Widget _buildVoteButton(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        boxShadow: [BoxShadow(color: colorScheme.shadow.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, -2))],
-      ),
-      child: ElevatedButton(
-        onPressed: () => _handleVote(context),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        ),
-        child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(AppIcons.vote, size: 22), SizedBox(width: 12), Text('تصويت', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
-      ),
-    );
-  }
+  // ─── NAVIGATION ─────────────────────────────────────────────────────────────
 
   Future<void> _handleVote(BuildContext context) async {
     if (!mounted) return;
@@ -313,9 +436,9 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen> {
   String _formatTimeAgo(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);
     if (diff.inMinutes < 1) return 'الآن';
-    if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes} دقيقة';
-    if (diff.inHours < 24) return 'منذ ${diff.inHours} ساعة';
-    if (diff.inDays < 7) return 'منذ ${diff.inDays} يوم';
+    if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes} د';
+    if (diff.inHours < 24) return 'منذ ${diff.inHours} س';
+    if (diff.inDays < 7) return 'منذ ${diff.inDays} ي';
     return 'منذ ${(diff.inDays / 7).floor()} أسبوع';
   }
 }
