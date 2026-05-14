@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/tile_cache_service.dart';
 import '../utils/app_icons.dart';
+import 'help_screen.dart';
+import 'documentation_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -86,6 +88,12 @@ class SettingsScreen extends StatelessWidget {
             icon: const Icon(AppIcons.delete),
             label: const Text('مسح ذاكرة الخريطة'),
           ),
+          const SizedBox(height: 24),
+          Text('الدعم', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colorScheme.primary)),
+          const SizedBox(height: 12),
+          _SettingsTile(icon: AppIcons.info, label: 'مساعدة', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()))),
+          const SizedBox(height: 8),
+          _SettingsTile(icon: AppIcons.list, label: 'دليل الاستخدام', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentationScreen()))),
         ],
       ),
     );
@@ -133,6 +141,35 @@ class _ThemeTile extends StatelessWidget {
             Text(label, style: TextStyle(fontSize: 11, fontWeight: selected ? FontWeight.bold : FontWeight.normal, color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _SettingsTile({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(children: [
+          Icon(icon, size: 18, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(child: Text(label, style: TextStyle(fontSize: 14, color: colorScheme.onSurface))),
+          Icon(AppIcons.arrowForwardIos, size: 12, color: colorScheme.onSurfaceVariant),
+        ]),
       ),
     );
   }
