@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import '../providers/governorate_provider.dart';
 import '../services/checkpoint_service.dart';
 import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
+import '../services/vote_queue_service.dart';
 import '../utils/app_icons.dart';
 import '../utils/constants.dart';
 import '../widgets/skeleton_loaders.dart';
@@ -296,24 +298,39 @@ class _VoteScreenState extends State<VoteScreen> {
     setState(() => _isSubmitting = true);
     try {
       final userId = _authService.currentUser!.uid;
-      final List<Future> votes = [];
+      final connectivity = await Connectivity().checkConnectivity();
+      final isOffline = connectivity.every((r) => r == ConnectivityResult.none);
 
+      final votesToSubmit = <Vote>[];
       if (_entranceStatus != null) {
-        votes.add(_checkpointService.submitVote(Vote(id: '', checkpointId: widget.checkpoint.id, userId: userId, direction: 'ENTRANCE', status: _entranceStatus!, comment: _commentController.text.isNotEmpty ? _commentController.text : null, timestamp: DateTime.now(), userLatitude: widget.userPosition?.latitude, userLongitude: widget.userPosition?.longitude)));
+        votesToSubmit.add(Vote(id: '', checkpointId: widget.checkpoint.id, userId: userId, direction: 'ENTRANCE', status: _entranceStatus!, comment: _commentController.text.isNotEmpty ? _commentController.text : null, timestamp: DateTime.now(), userLatitude: widget.userPosition?.latitude, userLongitude: widget.userPosition?.longitude));
       }
       if (_exitStatus != null) {
-        votes.add(_checkpointService.submitVote(Vote(id: '', checkpointId: widget.checkpoint.id, userId: userId, direction: 'EXIT', status: _exitStatus!, comment: _commentController.text.isNotEmpty ? _commentController.text : null, timestamp: DateTime.now(), userLatitude: widget.userPosition?.latitude, userLongitude: widget.userPosition?.longitude)));
+        votesToSubmit.add(Vote(id: '', checkpointId: widget.checkpoint.id, userId: userId, direction: 'EXIT', status: _exitStatus!, comment: _commentController.text.isNotEmpty ? _commentController.text : null, timestamp: DateTime.now(), userLatitude: widget.userPosition?.latitude, userLongitude: widget.userPosition?.longitude));
       }
 
-      await Future.wait(votes);
-      if (mounted) {
-        HapticService.voteConfirmed(context);
-        final celebrated = await FirstVoteCelebration.trigger(context);
-        if (celebrated && mounted) {
-          await Future.delayed(const Duration(milliseconds: 2800));
+      if (isOffline) {
+        for (final vote in votesToSubmit) {
+          await VoteQueueService().enqueue(vote);
         }
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Row(children: [Icon(AppIcons.cloudOff, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('تم حفظ التصويت — سيُرسل عند عودة الاتصال'))]),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ));
           Navigator.pop(context, true);
+        }
+      } else {
+        await Future.wait(votesToSubmit.map((v) => _checkpointService.submitVote(v)));
+        if (mounted) {
+          HapticService.voteConfirmed(context);
+          final celebrated = await FirstVoteCelebration.trigger(context);
+          if (celebrated && mounted) {
+            await Future.delayed(const Duration(milliseconds: 2800));
+          }
+          if (mounted) Navigator.pop(context, true);
         }
       }
     } catch (e) {

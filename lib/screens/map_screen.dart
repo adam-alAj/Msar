@@ -15,6 +15,7 @@ import '../services/auth_service.dart';
 import '../services/checkpoint_service.dart';
 import '../services/location_permission_service.dart';
 import '../services/tile_cache_service.dart';
+import '../services/vote_queue_service.dart';
 import '../utils/app_icons.dart';
 import '../utils/constants.dart';
 import '../widgets/checkpoint_marker.dart';
@@ -78,6 +79,7 @@ class _MapScreenState extends State<MapScreen>
     _checkAdmin();
     _subscribeToCheckpoints();
     _startAutoRefresh();
+    VoteQueueService().init();
     _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
       final offline = results.every((r) => r == ConnectivityResult.none);
       if (offline != _isOffline) setState(() => _isOffline = offline);
@@ -743,27 +745,27 @@ class _MapScreenState extends State<MapScreen>
         ),
         if (_isOffline)
           Positioned(
-            top: 8,
+            top: 0,
             left: 0,
             right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(AppIcons.cloudOff, size: 14, color: Theme.of(context).colorScheme.onErrorContainer),
-                    const SizedBox(width: 6),
-                    Text(
-                      'وضع عدم الاتصال — خريطة مخزنة مؤقتاً',
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onErrorContainer),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.error,
+                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+              ),
+              child: Row(
+                children: [
+                  Icon(AppIcons.wifiOff, size: 18, color: Theme.of(context).colorScheme.onError),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'لا يوجد اتصال بالإنترنت — البيانات المخزنة مؤقتاً',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onError),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

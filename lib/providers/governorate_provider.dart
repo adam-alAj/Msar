@@ -33,18 +33,23 @@ class GovernorateProvider extends ChangeNotifier {
     _isDetecting = true;
     notifyListeners();
 
-    final status = await _locationService.checkStatus();
-    if (status == LocationResult.granted) {
-      try {
-        final pos = await _locationService.getPosition();
-        _userPosition = LatLng(pos.latitude, pos.longitude);
-        _current = Governorate.fromCoordinates(pos.latitude, pos.longitude);
-        if (_current != null) await _persist(_current!.id);
-        _startListening();
-      } catch (_) {
+    try {
+      final status = await _locationService.checkStatus();
+      if (status == LocationResult.granted) {
+        try {
+          final pos = await _locationService.getPosition();
+          _userPosition = LatLng(pos.latitude, pos.longitude);
+          _current = Governorate.fromCoordinates(pos.latitude, pos.longitude);
+          if (_current != null) await _persist(_current!.id);
+          _startListening();
+        } catch (_) {
+          await _loadFromPrefs();
+        }
+      } else {
         await _loadFromPrefs();
       }
-    } else {
+    } catch (_) {
+      // Network/permission errors — gracefully use cached data
       await _loadFromPrefs();
     }
 
