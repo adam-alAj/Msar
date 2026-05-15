@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.widget.RemoteViews
 import androidx.work.*
@@ -99,6 +98,8 @@ class CheckpointWidgetProvider : AppWidgetProvider() {
             Triple(R.id.row2, R.id.name2, R.id.distance2),
             Triple(R.id.row3, R.id.name3, R.id.distance3),
         )
+        val statusIds = arrayOf(R.id.status1, R.id.status2, R.id.status3)
+        val statusTextIds = arrayOf(R.id.status_text1, R.id.status_text2, R.id.status_text3)
 
         if (dataJson.isNullOrEmpty()) {
             // Empty state
@@ -108,45 +109,53 @@ class CheckpointWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.empty_state, refreshPending)
         } else {
             views.setViewVisibility(R.id.empty_state, View.GONE)
-            val checkpoints = JSONArray(dataJson)
-            for (i in rowIds.indices) {
-                val (rowId, nameId, distId) = rowIds[i]
-                if (i < checkpoints.length()) {
-                    val cp = checkpoints.getJSONObject(i)
-                    views.setViewVisibility(rowId, View.VISIBLE)
-                    views.setTextViewText(nameId, cp.getString("name"))
-                    views.setTextViewText(distId, cp.getString("distance"))
+            try {
+                val checkpoints = JSONArray(dataJson)
+                for (i in rowIds.indices) {
+                    val (rowId, nameId, distId) = rowIds[i]
+                    if (i < checkpoints.length()) {
+                        val cp = checkpoints.getJSONObject(i)
+                        views.setViewVisibility(rowId, View.VISIBLE)
+                        views.setTextViewText(nameId, cp.getString("name"))
+                        views.setTextViewText(distId, cp.getString("distance"))
 
-                    // Status color via tint
-                    val statusColor = when (cp.optString("status", "OPEN")) {
-                        "CLOSED" -> 0xFFE53935.toInt()
-                        "CROWDED" -> 0xFFFFA726.toInt()
-                        else -> 0xFF4CAF50.toInt()
-                    }
-                    views.setInt(rowIds[i].first.let {
-                        // Set status circle color - use the status view ID
-                        when (i) {
-                            0 -> R.id.status1
-                            1 -> R.id.status2
-                            else -> R.id.status3
+                        // Status color
+                        val statusStr = cp.optString("status", "OPEN")
+                        val statusColor = when (statusStr) {
+                            "CLOSED" -> 0xFFE53935.toInt()
+                            "CROWDED" -> 0xFFFFA726.toInt()
+                            else -> 0xFF4CAF50.toInt()
                         }
-                    }, "setColorFilter", statusColor)
+                        val statusLabel = when (statusStr) {
+                            "CLOSED" -> "مغلق"
+                            "CROWDED" -> "أزمة"
+                            else -> "سالك"
+                        }
+                        views.setInt(statusIds[i], "setColorFilter", statusColor)
+                        views.setTextViewText(statusTextIds[i], statusLabel)
+                        views.setTextColor(statusTextIds[i], statusColor)
 
-                    // Tap row → launch app with checkpoint coordinates
-                    val launchIntent = Intent(context, MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        putExtra("checkpoint_lat", cp.optDouble("lat", 0.0))
-                        putExtra("checkpoint_lng", cp.optDouble("lng", 0.0))
-                        putExtra("checkpoint_id", cp.optString("id", ""))
+                        // Tap row → launch app
+                        val launchIntent = Intent(context, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                            putExtra("checkpoint_lat", cp.optDouble("lat", 0.0))
+                            putExtra("checkpoint_lng", cp.optDouble("lng", 0.0))
+                            putExtra("checkpoint_id", cp.optString("id", ""))
+                        }
+                        val launchPending = PendingIntent.getActivity(
+                            context, i + 100, launchIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        )
+                        views.setOnClickPendingIntent(rowId, launchPending)
+                    } else {
+                        views.setViewVisibility(rowId, View.GONE)
                     }
-                    val launchPending = PendingIntent.getActivity(
-                        context, i + 100, launchIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                    views.setOnClickPendingIntent(rowId, launchPending)
-                } else {
-                    views.setViewVisibility(rowId, View.GONE)
                 }
+            } catch (e: Exception) {
+                // If JSON parsing fails, show empty state
+                for ((rowId, _, _) in rowIds) views.setViewVisibility(rowId, View.GONE)
+                views.setViewVisibility(R.id.empty_state, View.VISIBLE)
+                views.setOnClickPendingIntent(R.id.empty_state, refreshPending)
             }
         }
 

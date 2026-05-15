@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../utils/app_icons.dart';
 
 // ─── HELP DATA ────────────────────────────────────────────────────────────────
@@ -104,12 +106,16 @@ class _HelpScreenState extends State<HelpScreen> {
         Text('تواصل معنا', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
         const SizedBox(height: 4),
         Text(
-          'لم تجد إجابة؟ تواصل معنا عبر البريد الإلكتروني وسنرد عليك في أقرب وقت.',
+          'لم تجد إجابة؟ اضغط على أي بريد إلكتروني للتواصل معنا',
           style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
-        Text('msar.app.support@gmail.com', style: TextStyle(fontSize: 13, color: colorScheme.primary, fontWeight: FontWeight.w600)),
+        _EmailTile(email: 'adam1alafandi1@gmail.com', name: 'Adam'),
+        const SizedBox(height: 6),
+        _EmailTile(email: 'mohammadayyad004@gmail.com', name: 'Mohammad'),
+        const SizedBox(height: 6),
+        _EmailTile(email: '202303862@bethlehem.edu', name: 'Baha'),
       ]),
     );
   }
@@ -160,6 +166,67 @@ class _HelpAccordionItemState extends State<_HelpAccordionItem> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+class _EmailTile extends StatelessWidget {
+  static const _subject = 'استفسار من تطبيق مسار';
+  static const _body = 'السلام عليكم،\n\nأكتب إليكم بخصوص تطبيق مسار...\n\n';
+
+  final String email;
+  final String name;
+
+  const _EmailTile({required this.email, required this.name});
+
+  Future<void> _launch(BuildContext context) async {
+    final encodedSubject = Uri.encodeComponent(_subject);
+    final encodedBody = Uri.encodeComponent(_body);
+
+    // 1. Try Gmail app directly
+    final gmailUri = Uri.parse('googlegmail:///co?to=$email&subject=$encodedSubject&body=$encodedBody');
+    if (await canLaunchUrl(gmailUri)) {
+      await launchUrl(gmailUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    // 2. Fallback: mailto (opens default mail client)
+    final mailtoUri = Uri.parse('mailto:$email?subject=$encodedSubject&body=$encodedBody');
+    if (await canLaunchUrl(mailtoUri)) {
+      await launchUrl(mailtoUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    // 3. Fallback: copy to clipboard + SnackBar
+    if (!context.mounted) return;
+    await Clipboard.setData(ClipboardData(text: email));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('لا يوجد تطبيق بريد مثبت — تم نسخ البريد الإلكتروني: $email')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: () => _launch(context),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+        ),
+        child: Row(children: [
+          Icon(AppIcons.send, size: 14, color: colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(child: Text(email, style: TextStyle(fontSize: 12, color: colorScheme.primary, fontWeight: FontWeight.w600))),
+          Text(name, style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+        ]),
       ),
     );
   }
