@@ -22,6 +22,8 @@ abstract class AppIcons {
   static const arrowBack = PhosphorIconsBold.arrowLeft;
   static const arrowForwardIos = PhosphorIconsBold.caretRight;
   static const arrowBackIos = PhosphorIconsBold.caretLeft;
+  static const caretDown = PhosphorIconsBold.caretDown;
+  static const caretUp = PhosphorIconsBold.caretUp;
   static const backNav = PhosphorIconsBold.arrowLeft;
 
   // ─── Actions ────────────────────────────────────────────────────────────

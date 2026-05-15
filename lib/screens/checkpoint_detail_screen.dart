@@ -91,7 +91,7 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
                 color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(AppIcons.backNav, size: 18, color: colorScheme.onSurface),
+              child: Directionality(textDirection: TextDirection.ltr, child: Icon(AppIcons.arrowForward, size: 18, color: colorScheme.onSurface)),
             ),
           ),
           const SizedBox(width: 12),
@@ -205,8 +205,8 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [colorScheme.primary.withOpacity(0.15), colorScheme.primary.withOpacity(0.05)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
@@ -274,12 +274,15 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
               border: Border.all(color: statusColor.withOpacity(0.4), width: 1.5),
             ),
             child: Column(children: [
-              Icon(
-                status.status == 'OPEN' ? AppIcons.checkpointOpen
-                    : status.status == 'CROWDED' ? AppIcons.checkpointCrowded
-                    : AppIcons.checkpointClosed,
-                size: 22,
-                color: statusColor,
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Icon(
+                  status.status == 'OPEN' ? AppIcons.checkpointOpen
+                      : status.status == 'CROWDED' ? AppIcons.checkpointCrowded
+                      : AppIcons.checkpointClosed,
+                  size: 22,
+                  color: statusColor,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -431,7 +434,7 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
     if (voted == true && mounted) {
       _commentsKey.currentState?.refresh();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Row(children: [Icon(AppIcons.checkpointOpen, color: Colors.white), SizedBox(width: 12), Expanded(child: Text('✓ تم تسجيل تصويتك بنجاح! شكراً لمشاركتك'))]),
+        content: const Row(children: [Directionality(textDirection: TextDirection.ltr, child: Icon(AppIcons.checkpointOpen, color: Colors.white)), SizedBox(width: 12), Expanded(child: Text('✓ تم تسجيل تصويتك بنجاح! شكراً لمشاركتك'))]),
         backgroundColor: Colors.green.shade700,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

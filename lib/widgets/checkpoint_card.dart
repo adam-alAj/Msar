@@ -87,7 +87,7 @@ class CheckpointCard extends StatelessWidget {
                   child: Center(child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Text('تفاصيل', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: colorScheme.primary)),
                     const SizedBox(width: 4),
-                    Icon(AppIcons.arrowForwardIos, size: 10, color: colorScheme.primary),
+                    Icon(AppIcons.arrowBackIos, size: 10, color: colorScheme.primary),
                   ])),
                 ),
               ],

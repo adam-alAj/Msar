@@ -163,11 +163,11 @@ class _DocSectionWidgetState extends State<_DocSectionWidget> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(color: colorScheme.primaryContainer, borderRadius: BorderRadius.circular(10)),
-                  child: Icon(s.icon, size: 18, color: colorScheme.primary),
+                  child: Directionality(textDirection: TextDirection.ltr, child: Icon(s.icon, size: 18, color: colorScheme.primary)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Text(s.title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colorScheme.onSurface))),
-                Icon(_expanded ? AppIcons.arrowBackIos : AppIcons.arrowForwardIos, size: 12, color: colorScheme.onSurfaceVariant),
+                Icon(_expanded ? AppIcons.caretUp : AppIcons.caretDown, size: 12, color: colorScheme.onSurfaceVariant),
               ]),
             ),
           ),

@@ -197,7 +197,7 @@ class _CheckpointSearchBarState extends State<CheckpointSearchBar> {
                             ],
                           ),
                         ),
-                        Icon(AppIcons.arrowForwardIos, size: 12, color: colorScheme.onSurfaceVariant),
+                        Icon(AppIcons.arrowBackIos, size: 12, color: colorScheme.onSurfaceVariant),
                       ],
                     ),
                   ),

@@ -168,7 +168,7 @@ class _SettingsTile extends StatelessWidget {
           Icon(icon, size: 18, color: colorScheme.primary),
           const SizedBox(width: 10),
           Expanded(child: Text(label, style: TextStyle(fontSize: 14, color: colorScheme.onSurface))),
-          Icon(AppIcons.arrowForwardIos, size: 12, color: colorScheme.onSurfaceVariant),
+          Icon(AppIcons.arrowBackIos, size: 12, color: colorScheme.onSurfaceVariant),
         ]),
       ),
     );

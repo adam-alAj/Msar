@@ -96,7 +96,9 @@ class _CheckpointMarkerState extends State<CheckpointMarker>
                 ),
               ],
             ),
-            child: Row(
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
@@ -123,6 +125,7 @@ class _CheckpointMarkerState extends State<CheckpointMarker>
                   ),
                 ),
               ],
+            ),
             ),
           ),
           const SizedBox(height: 2),
@@ -182,7 +185,10 @@ class _CheckpointMarkerState extends State<CheckpointMarker>
                       BoxShadow(color: statusColor.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 3)),
                     ],
                   ),
-                  child: Icon(config.icon, color: Colors.white, size: 26, semanticLabel: config.labelAr),
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Icon(config.icon, color: Colors.white, size: 26, semanticLabel: config.labelAr),
+                  ),
                 ),
               ],
             ),

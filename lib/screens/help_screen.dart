@@ -152,7 +152,7 @@ class _HelpAccordionItemState extends State<_HelpAccordionItem> {
           children: [
             Row(children: [
               Expanded(child: Text(widget.entry.question, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.onSurface))),
-              Icon(_expanded ? AppIcons.arrowBackIos : AppIcons.arrowForwardIos, size: 12, color: colorScheme.onSurfaceVariant),
+              Icon(_expanded ? AppIcons.caretUp : AppIcons.caretDown, size: 12, color: colorScheme.onSurfaceVariant),
             ]),
             AnimatedSize(
               duration: const Duration(milliseconds: 250),

@@ -398,7 +398,7 @@ class _MapScreenState extends State<MapScreen>
   Widget _buildRegionDrawer(ColorScheme colorScheme, bool isDark) {
     return Drawer(
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
+        borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -471,7 +471,7 @@ class _MapScreenState extends State<MapScreen>
           ? Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(color: iconColor.withOpacity(0.2), shape: BoxShape.circle),
-              child: Icon(AppIcons.check, color: iconColor, size: 18),
+              child: Directionality(textDirection: TextDirection.ltr, child: Icon(AppIcons.check, color: iconColor, size: 18)),
             )
           : null,
       tileColor: isSelected ? iconColor.withOpacity(0.08) : null,
@@ -554,7 +554,7 @@ class _MapScreenState extends State<MapScreen>
           color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, size: 17, color: onTap == null ? colorScheme.onSurfaceVariant.withOpacity(0.4) : colorScheme.onSurfaceVariant),
+        child: Directionality(textDirection: TextDirection.ltr, child: Icon(icon, size: 17, color: onTap == null ? colorScheme.onSurfaceVariant.withOpacity(0.4) : colorScheme.onSurfaceVariant)),
       ),
     );
   }
@@ -699,9 +699,9 @@ class _MapScreenState extends State<MapScreen>
       children: [
         map,
         if (_selectedRegion != null)
-          Positioned(
+          PositionedDirectional(
             top: 12,
-            right: 12,
+            start: 12,
             child: Material(
               elevation: 2,
               borderRadius: BorderRadius.circular(20),
@@ -720,21 +720,24 @@ class _MapScreenState extends State<MapScreen>
               ),
             ),
           ),
-        const Positioned(
+        const PositionedDirectional(
           bottom: 16,
-          right: 16,
+          start: 16,
           child: MapLegend(),
         ),
-        Positioned(
+        PositionedDirectional(
           bottom: 16,
-          left: 16,
+          end: 16,
           child: FloatingActionButton.small(
             heroTag: 'locationFab',
             onPressed: _onLocationFabPressed,
             backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            child: Icon(
-              _userLocation != null ? AppIcons.myLocation : AppIcons.locationSearching,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Icon(
+                _userLocation != null ? AppIcons.myLocation : AppIcons.locationSearching,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
             ),
           ),
         ),

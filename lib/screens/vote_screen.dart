@@ -58,7 +58,7 @@ class _VoteScreenState extends State<VoteScreen> {
             ]),
             backgroundColor: Colors.transparent,
             elevation: 0,
-            leading: IconButton(icon: Icon(AppIcons.arrowBackIos, color: colorScheme.onPrimary), onPressed: () => Navigator.pop(context)),
+            leading: IconButton(icon: Icon(AppIcons.arrowForwardIos, color: colorScheme.onPrimary), onPressed: () => Navigator.pop(context)),
           ),
         ),
       ),
@@ -259,9 +259,9 @@ class _VoteScreenState extends State<VoteScreen> {
                 onTap: () => onStatusSelected(option['value'] as String),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  margin: EdgeInsets.only(
-                    left: option == statusOptions.first ? 0 : 6,
-                    right: option == statusOptions.last ? 0 : 6,
+                  margin: EdgeInsetsDirectional.only(
+                    start: option == statusOptions.first ? 0 : 6,
+                    end: option == statusOptions.last ? 0 : 6,
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
@@ -270,7 +270,7 @@ class _VoteScreenState extends State<VoteScreen> {
                     border: Border.all(color: isSelected ? color : colorScheme.outlineVariant, width: isSelected ? 2 : 1),
                   ),
                   child: Column(children: [
-                    Icon(option['icon'] as IconData, color: isSelected ? color : colorScheme.onSurfaceVariant, size: 28),
+                    Directionality(textDirection: TextDirection.ltr, child: Icon(option['icon'] as IconData, color: isSelected ? color : colorScheme.onSurfaceVariant, size: 28)),
                     const SizedBox(height: 8),
                     Text(option['label'] as String, style: TextStyle(fontSize: 14, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? color : colorScheme.onSurfaceVariant)),
                   ]),

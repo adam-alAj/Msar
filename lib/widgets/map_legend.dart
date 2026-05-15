@@ -30,7 +30,7 @@ class MapLegend extends StatelessWidget {
                     color: color,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(config.icon, color: Colors.white, size: 14),
+                  child: Directionality(textDirection: TextDirection.ltr, child: Icon(config.icon, color: Colors.white, size: 14)),
                 ),
                 const SizedBox(width: 6),
                 Text(

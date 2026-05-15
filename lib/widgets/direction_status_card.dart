@@ -31,9 +31,9 @@ class DirectionStatusCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(compact ? 16 : 20),
         child: Stack(
           children: [
-            Positioned(right: 0, top: 0, bottom: 0, child: Container(width: compact ? 4 : 6, color: statusColor)),
+            PositionedDirectional(start: 0, top: 0, bottom: 0, child: Container(width: compact ? 4 : 6, color: statusColor)),
             Padding(
-              padding: compact ? const EdgeInsets.fromLTRB(10, 14, 14, 14) : const EdgeInsets.fromLTRB(16, 18, 22, 18),
+              padding: compact ? const EdgeInsetsDirectional.fromSTEB(14, 14, 10, 14) : const EdgeInsetsDirectional.fromSTEB(22, 18, 16, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [

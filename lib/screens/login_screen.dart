@@ -95,6 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
         focusNode: _otpFocusNodes[index],
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
         maxLength: 1,
         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: colorScheme.primary, height: 1.0),
         decoration: InputDecoration(
@@ -130,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.only(left: 28, right: 28, top: 0, bottom: MediaQuery.of(context).viewInsets.bottom + 16),
+          padding: EdgeInsets.symmetric(horizontal: 28).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 16),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
@@ -208,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ] else ...[
                     Text('أدخل الرمز المرسل إلى $_fullPhoneNumber', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: colorScheme.onSurface.withOpacity(0.5))),
                     const SizedBox(height: 16),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: List.generate(6, _buildOtpBox)),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: List.generate(6, (i) => Directionality(textDirection: TextDirection.ltr, child: _buildOtpBox(i)))),
                   ],
 
                   const SizedBox(height: 12),

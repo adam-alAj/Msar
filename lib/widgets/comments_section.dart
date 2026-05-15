@@ -116,7 +116,7 @@ class _CommentCardState extends State<CommentCard> {
                 final dirLabel = v.direction == 'ENTRANCE' ? 'داخل' : 'خارج';
                 final statusLabel = v.status == 'OPEN' ? 'سالك' : v.status == 'CROWDED' ? 'أزمة' : 'مغلق';
                 return Padding(
-                  padding: const EdgeInsets.only(left: 6),
+                  padding: const EdgeInsetsDirectional.only(start: 6),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
