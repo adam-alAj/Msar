@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import '../models/checkpoint.dart';
 import '../models/checkpoint_status.dart';
 import '../services/checkpoint_service.dart';
+import '../services/favorites_service.dart';
 import '../services/location_service.dart';
 import '../services/auth_service.dart';
 import '../utils/app_icons.dart';
@@ -139,6 +140,26 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
                   const SizedBox(width: 5),
                   Text('مباشر', style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.w700)),
                 ]),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+          // Favorite heart toggle
+          ValueListenableBuilder<Set<String>>(
+            valueListenable: FavoritesService().favorites,
+            builder: (context, favs, _) {
+              final isFav = favs.contains(widget.checkpoint.id);
+              return GestureDetector(
+                onTap: () => FavoritesService().toggle(widget.checkpoint.id),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: Icon(
+                    isFav ? Icons.favorite : Icons.favorite_border,
+                    key: ValueKey(isFav),
+                    size: 24,
+                    color: isFav ? Colors.red : colorScheme.onSurfaceVariant,
+                  ),
+                ),
               );
             },
           ),

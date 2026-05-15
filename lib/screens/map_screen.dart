@@ -13,6 +13,7 @@ import '../models/governorate.dart';
 import '../providers/governorate_provider.dart';
 import '../services/auth_service.dart';
 import '../services/checkpoint_service.dart';
+import '../services/favorites_service.dart';
 import '../services/location_permission_service.dart';
 import '../services/tile_cache_service.dart';
 import '../services/vote_queue_service.dart';
@@ -75,11 +76,13 @@ class _MapScreenState extends State<MapScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _checkAdmin();
     _subscribeToCheckpoints();
     _startAutoRefresh();
     VoteQueueService().init();
+    FavoritesService().listen();
+    FavoritesService().favorites.addListener(_onFavoritesChanged);
     _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
       final offline = results.every((r) => r == ConnectivityResult.none);
       if (offline != _isOffline) setState(() => _isOffline = offline);
@@ -89,6 +92,10 @@ class _MapScreenState extends State<MapScreen>
   }
 
   bool _governorateInitialized = false;
+
+  void _onFavoritesChanged() {
+    if (mounted) setState(() {});
+  }
 
   void _syncFromGovernorate() {
     final govProvider = context.read<GovernorateProvider>();
@@ -154,6 +161,7 @@ class _MapScreenState extends State<MapScreen>
     _checkpointSub?.cancel();
     _connectivitySub?.cancel();
     _tabController.dispose();
+    FavoritesService().favorites.removeListener(_onFavoritesChanged);
     try { context.read<GovernorateProvider>().removeListener(_onGovernorateChanged); } catch (_) {}
     super.dispose();
   }
@@ -380,7 +388,9 @@ class _MapScreenState extends State<MapScreen>
                           ? _buildErrorState(colorScheme)
                           : _selectedTabIndex == 0
                               ? _buildMapView(isDark)
-                              : _buildListView(),
+                              : _selectedTabIndex == 1
+                                  ? _buildListView()
+                                  : _buildFavoritesView(),
                 ),
               ),
             ],
@@ -598,6 +608,7 @@ class _MapScreenState extends State<MapScreen>
         tabs: const [
           Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(AppIcons.map, size: 16), SizedBox(width: 6), Text('الخريطة')])),
           Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(AppIcons.list, size: 16), SizedBox(width: 6), Text('القائمة')])),
+          Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.favorite, size: 16), SizedBox(width: 6), Text('المفضلة')])),
         ],
       ),
     );
@@ -786,15 +797,20 @@ class _MapScreenState extends State<MapScreen>
       return EmptyStateView.noSearchResults(_searchQuery);
     }
 
-    // Sort by distance
+    // Sort by distance, favorites first
     final sorted = List<Checkpoint>.from(searchFiltered);
-    if (_userLocation != null) {
-      sorted.sort((a, b) {
+    final favs = FavoritesService().favorites.value;
+    sorted.sort((a, b) {
+      final aFav = favs.contains(a.id) ? 0 : 1;
+      final bFav = favs.contains(b.id) ? 0 : 1;
+      if (aFav != bFav) return aFav.compareTo(bFav);
+      if (_userLocation != null) {
         final dA = _haversineKm(_userLocation!.latitude, _userLocation!.longitude, a.latitude, a.longitude);
         final dB = _haversineKm(_userLocation!.latitude, _userLocation!.longitude, b.latitude, b.longitude);
         return dA.compareTo(dB);
-      });
-    }
+      }
+      return 0;
+    });
 
     return RefreshIndicator(
       onRefresh: _pullToRefresh,
@@ -812,6 +828,35 @@ class _MapScreenState extends State<MapScreen>
           );
         },
       ),
+    );
+  }
+
+  Widget _buildFavoritesView() {
+    return ValueListenableBuilder<Set<String>>(
+      valueListenable: FavoritesService().favorites,
+      builder: (context, favs, _) {
+        final favCheckpoints = _filteredCheckpoints.where((cp) => favs.contains(cp.id)).toList();
+        if (favCheckpoints.isEmpty) {
+          return EmptyStateView.noFavorites();
+        }
+        return RefreshIndicator(
+          onRefresh: _pullToRefresh,
+          color: Theme.of(context).colorScheme.primary,
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            itemCount: favCheckpoints.length,
+            itemBuilder: (context, index) {
+              final cp = favCheckpoints[index];
+              return CheckpointCard(
+                checkpoint: cp,
+                status: _statuses[cp.id],
+                onTap: () => _openDetail(cp),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -880,14 +925,17 @@ class _MapScreenState extends State<MapScreen>
   }
 
   List<Marker> _buildMarkers() {
+    final favs = FavoritesService().favorites.value;
     return _filteredCheckpoints.map((cp) {
+      final isFav = favs.contains(cp.id);
       return Marker(
         point: LatLng(cp.latitude, cp.longitude),
-        width: 120,
-        height: 76,
+        width: isFav ? 140 : 120,
+        height: isFav ? 90 : 76,
         child: CheckpointMarker(
           checkpoint: cp,
           status: _statuses[cp.id],
+          isFavorite: isFav,
           onTap: () => _openDetail(cp),
         ),
       );

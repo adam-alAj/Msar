@@ -7,12 +7,14 @@ import '../utils/constants.dart';
 class CheckpointMarker extends StatefulWidget {
   final Checkpoint checkpoint;
   final CheckpointStatus? status;
+  final bool isFavorite;
   final VoidCallback onTap;
 
   const CheckpointMarker({
     super.key,
     required this.checkpoint,
     required this.status,
+    this.isFavorite = false,
     required this.onTap,
   });
 
@@ -172,17 +174,19 @@ class _CheckpointMarkerState extends State<CheckpointMarker>
                   ),
                 // Main icon
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: widget.isFavorite ? 54 : 48,
+                  height: widget.isFavorite ? 54 : 48,
                   decoration: BoxDecoration(
                     color: statusColor,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: brightness == Brightness.dark ? Colors.white70 : Colors.white,
-                      width: 2.5,
+                      color: widget.isFavorite ? Colors.amber : (brightness == Brightness.dark ? Colors.white70 : Colors.white),
+                      width: widget.isFavorite ? 3.5 : 2.5,
                     ),
                     boxShadow: [
                       BoxShadow(color: statusColor.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 3)),
+                      if (widget.isFavorite)
+                        BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 1),
                     ],
                   ),
                   child: Directionality(
