@@ -173,14 +173,24 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
           if (_isAdmin) ...[
             const SizedBox(width: 8),
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: colorScheme.onSurfaceVariant),
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.more_vert_rounded, size: 18, color: colorScheme.onSurface),
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              offset: const Offset(0, 40),
               onSelected: (value) {
                 if (value == 'edit') _showEditCheckpointDialog();
                 if (value == 'delete') _showDeleteConfirmation();
               },
               itemBuilder: (_) => [
-                const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('تعديل الحاجز')])),
-                const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.red), SizedBox(width: 8), Text('حذف الحاجز', style: TextStyle(color: Colors.red))])),
+                PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_rounded, size: 18, color: Colors.blue.shade600), const SizedBox(width: 10), const Text('تعديل الحاجز', style: TextStyle(fontWeight: FontWeight.w500))])),
+                const PopupMenuDivider(height: 1),
+                PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_rounded, size: 18, color: Colors.red.shade600), const SizedBox(width: 10), Text('حذف الحاجز', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.red.shade600))])),
               ],
             ),
           ],
@@ -374,81 +384,149 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
 
   Widget _buildAdminOverrideSection(ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange.withOpacity(0.4)),
+        gradient: LinearGradient(
+          colors: [Colors.deepOrange.withOpacity(0.06), Colors.orange.withOpacity(0.03)],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Icon(Icons.admin_panel_settings, size: 18, color: Colors.orange.shade700),
-            const SizedBox(width: 6),
-            Text('تحكم المسؤول', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.orange.shade700)),
-          ]),
-          const SizedBox(height: 12),
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.admin_panel_settings_rounded, size: 16, color: Colors.orange.shade800),
+              const SizedBox(width: 6),
+              Text('تغيير الحالة يدوياً', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.orange.shade800)),
+            ]),
+          ),
+          const SizedBox(height: 16),
           // Entrance override
-          _buildOverrideRow('داخل', 'ENTRANCE', colorScheme),
-          const SizedBox(height: 8),
+          _buildOverrideRow('للداخل', 'ENTRANCE', AppIcons.arrowForward, const Color(0xFF26A69A), colorScheme),
+          const SizedBox(height: 12),
           // Exit override
-          _buildOverrideRow('طالع', 'EXIT', colorScheme),
+          _buildOverrideRow('للخارج', 'EXIT', AppIcons.arrowBack, const Color(0xFF7E57C2), colorScheme),
         ],
       ),
     );
   }
 
-  Widget _buildOverrideRow(String label, String direction, ColorScheme colorScheme) {
-    return Row(
+  Widget _buildOverrideRow(String label, String direction, IconData dirIcon, Color dirColor, ColorScheme colorScheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(width: 40, child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.onSurface))),
-        const SizedBox(width: 8),
-        _buildStatusChip('سالك', 'OPEN', direction, const Color(0xFF4CAF50)),
-        const SizedBox(width: 6),
-        _buildStatusChip('أزمة', 'CROWDED', direction, const Color(0xFFFFA726)),
-        const SizedBox(width: 6),
-        _buildStatusChip('مغلق', 'CLOSED', direction, const Color(0xFFE53935)),
+        Row(children: [
+          Icon(dirIcon, size: 14, color: dirColor),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: dirColor)),
+        ]),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _buildStatusChip('سالك', 'OPEN', direction, const Color(0xFF4CAF50), Icons.check_circle_rounded),
+            const SizedBox(width: 8),
+            _buildStatusChip('أزمة', 'CROWDED', direction, const Color(0xFFFFA726), Icons.warning_rounded),
+            const SizedBox(width: 8),
+            _buildStatusChip('مغلق', 'CLOSED', direction, const Color(0xFFE53935), Icons.cancel_rounded),
+          ],
+        ),
       ],
     );
   }
 
-  Widget _buildStatusChip(String label, String status, String direction, Color color) {
+  Widget _buildStatusChip(String label, String status, String direction, Color color, IconData icon) {
     return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => _overrideStatus(direction, status),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withOpacity(0.5)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _overrideStatus(direction, status),
+          splashColor: color.withOpacity(0.2),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withOpacity(0.35)),
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(height: 4),
+              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+            ]),
           ),
-          child: Center(child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color))),
         ),
       ),
     );
   }
 
   Future<void> _overrideStatus(String direction, String status) async {
+    final dirLabel = direction == 'ENTRANCE' ? 'للداخل' : 'للخارج';
+    final statusLabel = status == 'OPEN' ? 'سالك' : status == 'CROWDED' ? 'أزمة' : 'مغلق';
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Icon(Icons.admin_panel_settings_rounded, size: 22, color: Colors.orange.shade700),
+          const SizedBox(width: 8),
+          const Text('تأكيد التغيير', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        ]),
+        content: Text('تغيير حالة "$dirLabel" إلى "$statusLabel"؟', style: const TextStyle(fontSize: 14)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade700,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('تأكيد', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     try {
       await _checkpointService.overrideStatus(widget.checkpoint.id, direction, status);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('✓ تم تحديث الحالة بنجاح'),
+          content: Row(children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text('تم تحديث "$dirLabel" → "$statusLabel"'),
+          ]),
           backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
         ));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('❌ فشل التحديث: $e'),
-          backgroundColor: Colors.red,
+          content: Row(children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text('فشل التحديث: $e')),
+          ]),
+          backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
         ));
       }
     }
@@ -584,43 +662,126 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('تعديل الحاجز', style: TextStyle(fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.edit_rounded, size: 20, color: Colors.blue),
+          ),
+          const SizedBox(width: 10),
+          const Text('تعديل الحاجز', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+        ]),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الحاجز', border: OutlineInputBorder()), textDirection: TextDirection.rtl),
-            const SizedBox(height: 12),
-            TextField(controller: regionController, decoration: const InputDecoration(labelText: 'المنطقة', border: OutlineInputBorder()), textDirection: TextDirection.rtl),
-            const SizedBox(height: 12),
-            TextField(controller: latController, decoration: const InputDecoration(labelText: 'خط العرض', border: OutlineInputBorder()), keyboardType: TextInputType.number),
-            const SizedBox(height: 12),
-            TextField(controller: lngController, decoration: const InputDecoration(labelText: 'خط الطول', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'اسم الحاجز',
+                prefixIcon: const Icon(Icons.location_on_rounded, size: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: regionController,
+              decoration: InputDecoration(
+                labelText: 'المنطقة',
+                prefixIcon: const Icon(Icons.map_rounded, size: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 14),
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: latController,
+                  decoration: InputDecoration(
+                    labelText: 'خط العرض',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    isDense: true,
+                  ),
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: lngController,
+                  decoration: InputDecoration(
+                    labelText: 'خط الطول',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    isDense: true,
+                  ),
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+            ]),
           ]),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-          ElevatedButton(
-            onPressed: () async {
-              final updated = Checkpoint(
-                id: widget.checkpoint.id,
-                name: nameController.text.trim(),
-                region: regionController.text.trim(),
-                latitude: double.tryParse(latController.text) ?? widget.checkpoint.latitude,
-                longitude: double.tryParse(lngController.text) ?? widget.checkpoint.longitude,
-                createdBy: widget.checkpoint.createdBy,
-                createdAt: widget.checkpoint.createdAt,
-              );
-              try {
-                await _checkpointService.updateCheckpoint(updated);
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ تم تعديل الحاجز بنجاح'), backgroundColor: Colors.green));
-                }
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ فشل التعديل: $e'), backgroundColor: Colors.red));
-              }
-            },
-            child: const Text('حفظ'),
-          ),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('إلغاء'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  final updated = Checkpoint(
+                    id: widget.checkpoint.id,
+                    name: nameController.text.trim(),
+                    region: regionController.text.trim(),
+                    latitude: double.tryParse(latController.text) ?? widget.checkpoint.latitude,
+                    longitude: double.tryParse(lngController.text) ?? widget.checkpoint.longitude,
+                    createdBy: widget.checkpoint.createdBy,
+                    createdAt: widget.checkpoint.createdAt,
+                  );
+                  try {
+                    await _checkpointService.updateCheckpoint(updated);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: const Row(children: [Icon(Icons.check_circle, color: Colors.white, size: 18), SizedBox(width: 8), Text('تم تعديل الحاجز بنجاح')]),
+                        backgroundColor: Colors.green.shade700,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        margin: const EdgeInsets.all(16),
+                      ));
+                    }
+                  } catch (e) {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ فشل التعديل: $e'), backgroundColor: Colors.red));
+                  }
+                },
+                child: const Text('حفظ التعديلات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ]),
         ],
       ),
     );
@@ -630,29 +791,77 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('حذف الحاجز', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-        content: Text('هل أنت متأكد من حذف "${widget.checkpoint.name}"؟ لا يمكن التراجع عن هذا الإجراء.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              try {
-                await _checkpointService.deleteCheckpoint(widget.checkpoint.id);
-                if (mounted) {
-                  Navigator.pop(context); // close dialog
-                  Navigator.pop(context); // go back to map
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ تم حذف الحاجز'), backgroundColor: Colors.green));
-                }
-              } catch (e) {
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ فشل الحذف: $e'), backgroundColor: Colors.red));
-                }
-              }
-            },
-            child: const Text('حذف', style: TextStyle(color: Colors.white)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.delete_forever_rounded, size: 22, color: Colors.red),
           ),
+          const SizedBox(width: 10),
+          const Text('حذف الحاجز', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red.withOpacity(0.2)),
+            ),
+            child: Row(children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text('سيتم حذف "${widget.checkpoint.name}" نهائياً.\nلا يمكن التراجع عن هذا الإجراء.', style: const TextStyle(fontSize: 13, height: 1.5))),
+            ]),
+          ),
+        ]),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        actions: [
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('إلغاء'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  try {
+                    await _checkpointService.deleteCheckpoint(widget.checkpoint.id);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: const Row(children: [Icon(Icons.check_circle, color: Colors.white, size: 18), SizedBox(width: 8), Text('تم حذف الحاجز')]),
+                        backgroundColor: Colors.green.shade700,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        margin: const EdgeInsets.all(16),
+                      ));
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ فشل الحذف: $e'), backgroundColor: Colors.red));
+                    }
+                  }
+                },
+                child: const Text('حذف نهائي', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ]),
         ],
       ),
     );
