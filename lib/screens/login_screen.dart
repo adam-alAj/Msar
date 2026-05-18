@@ -168,7 +168,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // Phone input
                   if (!_otpSent) ...[
-                    Container(
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Container(
                       height: 58,
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,
@@ -205,6 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
+                    ),
                     ),
                   ] else ...[
                     Text('أدخل الرمز المرسل إلى $_fullPhoneNumber', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: colorScheme.onSurface.withOpacity(0.5))),

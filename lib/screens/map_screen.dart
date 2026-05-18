@@ -17,6 +17,7 @@ import '../services/favorites_service.dart';
 import '../services/location_permission_service.dart';
 import '../services/tile_cache_service.dart';
 import '../services/vote_queue_service.dart';
+import '../services/widget_bridge_service.dart';
 import '../utils/app_icons.dart';
 import '../utils/constants.dart';
 import '../widgets/checkpoint_marker.dart';
@@ -95,6 +96,41 @@ class _MapScreenState extends State<MapScreen>
 
   void _onFavoritesChanged() {
     if (mounted) setState(() {});
+  }
+
+  void _updateHomeWidget() {
+    final sorted = List<Checkpoint>.from(_allCheckpoints);
+    if (_userLocation != null) {
+      sorted.sort((a, b) {
+        final dA = _haversineKm(_userLocation!.latitude, _userLocation!.longitude, a.latitude, a.longitude);
+        final dB = _haversineKm(_userLocation!.latitude, _userLocation!.longitude, b.latitude, b.longitude);
+        return dA.compareTo(dB);
+      });
+    }
+    final nearest = sorted.take(3).map((cp) {
+      final dist = _userLocation != null
+          ? _haversineKm(_userLocation!.latitude, _userLocation!.longitude, cp.latitude, cp.longitude)
+          : 0.0;
+      final status = _statuses[cp.id];
+      final worstStatus = _worstStatusOf(status);
+      return {
+        'id': cp.id,
+        'name': cp.name,
+        'lat': cp.latitude,
+        'lng': cp.longitude,
+        'distance': dist < 1.0 ? '${(dist * 1000).toInt()} م' : '${dist.toStringAsFixed(1)} كم',
+        'status': worstStatus,
+      };
+    }).toList();
+    WidgetBridgeService.updateWidgetData(nearest);
+  }
+
+  String _worstStatusOf(CheckpointStatus? status) {
+    if (status == null) return 'OPEN';
+    const priority = {'OPEN': 0, 'CROWDED': 1, 'CLOSED': 2};
+    final e = priority[status.entrance.status] ?? 0;
+    final x = priority[status.exit.status] ?? 0;
+    return e >= x ? status.entrance.status : status.exit.status;
   }
 
   void _syncFromGovernorate() {
@@ -246,6 +282,8 @@ class _MapScreenState extends State<MapScreen>
         _lastStatusUpdate = DateTime.now();
         _offlineSkipCount = 0;
       });
+
+      _updateHomeWidget();
 
       // Show change notification only if there are actual changes
       if (changes.isNotEmpty && mounted) {
