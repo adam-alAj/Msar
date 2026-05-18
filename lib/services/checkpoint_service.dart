@@ -83,14 +83,31 @@ class CheckpointService {
       byCheckpoint.putIfAbsent(v.checkpointId, () => []).add(v);
     }
 
+    // Fetch checkpoint docs for admin overrides
+    final checkpointDocs = await _firestore
+        .collection(AppConstants.checkpointsCollection)
+        .get(options ?? const GetOptions());
+    final Map<String, Map<String, dynamic>> overrides = {};
+    for (final doc in checkpointDocs.docs) {
+      final data = doc.data();
+      if (data.containsKey('entranceStatus') || data.containsKey('exitStatus')) {
+        overrides[doc.id] = data;
+      }
+    }
+
     // Build status for every requested checkpoint
     final Map<String, CheckpointStatus> result = {};
     for (final id in checkpointIds) {
       final votes = byCheckpoint[id] ?? [];
+      final override = overrides[id];
       result[id] = CheckpointStatus(
         checkpointId: id,
-        entrance: _calculateDirectionStatus(votes, 'ENTRANCE'),
-        exit: _calculateDirectionStatus(votes, 'EXIT'),
+        entrance: override != null && override['entranceStatus'] != null
+            ? DirectionStatus(status: override['entranceStatus'], percentage: 100, lastUpdated: DateTime.now(), totalVotes: 0)
+            : _calculateDirectionStatus(votes, 'ENTRANCE'),
+        exit: override != null && override['exitStatus'] != null
+            ? DirectionStatus(status: override['exitStatus'], percentage: 100, lastUpdated: DateTime.now(), totalVotes: 0)
+            : _calculateDirectionStatus(votes, 'EXIT'),
       );
     }
     return result;
@@ -102,6 +119,13 @@ class CheckpointService {
     final cutoff = DateTime.now().subtract(
       Duration(minutes: AppConstants.voteTimeWindowMinutes),
     );
+
+    // Check for admin override
+    final cpDoc = await _firestore
+        .collection(AppConstants.checkpointsCollection)
+        .doc(checkpointId)
+        .get();
+    final cpData = cpDoc.data();
 
     // Get all votes and filter in memory
     final snapshot = await _firestore
@@ -117,33 +141,49 @@ class CheckpointService {
 
     return CheckpointStatus(
       checkpointId: checkpointId,
-      entrance: _calculateDirectionStatus(votes, 'ENTRANCE'),
-      exit: _calculateDirectionStatus(votes, 'EXIT'),
+      entrance: cpData != null && cpData['entranceStatus'] != null
+          ? DirectionStatus(status: cpData['entranceStatus'], percentage: 100, lastUpdated: DateTime.now(), totalVotes: 0)
+          : _calculateDirectionStatus(votes, 'ENTRANCE'),
+      exit: cpData != null && cpData['exitStatus'] != null
+          ? DirectionStatus(status: cpData['exitStatus'], percentage: 100, lastUpdated: DateTime.now(), totalVotes: 0)
+          : _calculateDirectionStatus(votes, 'EXIT'),
     );
   }
 
   // ─── FIXED: Real-time stream for detail screen ──────────────────────────
 
   Stream<CheckpointStatus> watchCheckpointStatus(String checkpointId) {
-    // Get all votes and filter on the client side to avoid index issues
-    return _firestore
+    // Combine checkpoint doc (for overrides) with votes
+    final cpStream = _firestore
+        .collection(AppConstants.checkpointsCollection)
+        .doc(checkpointId)
+        .snapshots();
+
+    final votesStream = _firestore
         .collection(AppConstants.votesCollection)
-        .snapshots()
-        .map((snapshot) {
-      final cutoff = DateTime.now().subtract(
-        Duration(minutes: AppConstants.voteTimeWindowMinutes),
-      );
-      
-      final votes = snapshot.docs
-          .map(Vote.fromFirestore)
-          .where((v) => v.checkpointId == checkpointId && v.timestamp.isAfter(cutoff))
-          .toList();
-          
-      return CheckpointStatus(
-        checkpointId: checkpointId,
-        entrance: _calculateDirectionStatus(votes, 'ENTRANCE'),
-        exit: _calculateDirectionStatus(votes, 'EXIT'),
-      );
+        .snapshots();
+
+    return cpStream.asyncExpand((cpSnapshot) {
+      return votesStream.map((votesSnapshot) {
+        final cutoff = DateTime.now().subtract(
+          Duration(minutes: AppConstants.voteTimeWindowMinutes),
+        );
+        final cpData = cpSnapshot.data();
+        final votes = votesSnapshot.docs
+            .map(Vote.fromFirestore)
+            .where((v) => v.checkpointId == checkpointId && v.timestamp.isAfter(cutoff))
+            .toList();
+
+        return CheckpointStatus(
+          checkpointId: checkpointId,
+          entrance: cpData != null && cpData['entranceStatus'] != null
+              ? DirectionStatus(status: cpData['entranceStatus'], percentage: 100, lastUpdated: DateTime.now(), totalVotes: 0)
+              : _calculateDirectionStatus(votes, 'ENTRANCE'),
+          exit: cpData != null && cpData['exitStatus'] != null
+              ? DirectionStatus(status: cpData['exitStatus'], percentage: 100, lastUpdated: DateTime.now(), totalVotes: 0)
+              : _calculateDirectionStatus(votes, 'EXIT'),
+        );
+      });
     });
   }
 
