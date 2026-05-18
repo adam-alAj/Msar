@@ -435,13 +435,18 @@ class _MapScreenState extends State<MapScreen>
           ),
         ),
       ),
-      floatingActionButton: _isAdmin
-          ? FloatingActionButton(
-              onPressed: () => _showAddCheckpointDialog(),
-              backgroundColor: colorScheme.primary,
-              child: const Icon(AppIcons.addLocation),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton(
+            heroTag: 'locationFab',
+            onPressed: _onLocationFabPressed,
+            backgroundColor: colorScheme.primaryContainer,
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Icon(
+                _userLocation != null ? AppIcons.myLocation : AppIcons.locationSearching,
+                color: colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ),
     );
   }
 
@@ -776,22 +781,30 @@ class _MapScreenState extends State<MapScreen>
           start: 16,
           child: MapLegend(),
         ),
-        PositionedDirectional(
-          bottom: 16,
-          end: 16,
-          child: FloatingActionButton.small(
-            heroTag: 'locationFab',
-            onPressed: _onLocationFabPressed,
-            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            child: Directionality(
-              textDirection: TextDirection.ltr,
-              child: Icon(
-                _userLocation != null ? AppIcons.myLocation : AppIcons.locationSearching,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
+        if (_isAdmin)
+          PositionedDirectional(
+            top: 8,
+            end: 12,
+            child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '💡 اضغط مطولاً لإضافة حاجز',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(color: Colors.white.withOpacity(0.8), blurRadius: 8),
+                      Shadow(color: Colors.white.withOpacity(0.5), blurRadius: 16),
+                    ],
+                  ),
+                ),
             ),
           ),
-        ),
         if (_isOffline)
           Positioned(
             top: 0,
@@ -986,11 +999,12 @@ class _MapScreenState extends State<MapScreen>
 
   void _showAddCheckpointDialog({LatLng? position}) {
     final nameController = TextEditingController();
-    final regionController = TextEditingController();
+    String? selectedRegion;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
         title: const Text('إضافة حاجز جديد', style: TextStyle(fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Column(
@@ -1003,11 +1017,11 @@ class _MapScreenState extends State<MapScreen>
                 textDirection: TextDirection.rtl,
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: regionController,
-                decoration: const InputDecoration(labelText: 'المنطقة', hintText: 'مثال: رام الله', border: OutlineInputBorder(), prefixIcon: Icon(AppIcons.place)),
-                textAlign: TextAlign.right,
-                textDirection: TextDirection.rtl,
+              DropdownButtonFormField<String>(
+                value: selectedRegion,
+                decoration: const InputDecoration(labelText: 'المنطقة', border: OutlineInputBorder(), prefixIcon: Icon(AppIcons.place)),
+                items: AppConstants.regions.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                onChanged: (v) => setDialogState(() => selectedRegion = v),
               ),
               if (position != null) ...[
                 const SizedBox(height: 12),
@@ -1038,6 +1052,10 @@ class _MapScreenState extends State<MapScreen>
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء إدخال اسم الحاجز'), backgroundColor: Colors.orange));
                 return;
               }
+              if (selectedRegion == null) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء اختيار المنطقة'), backgroundColor: Colors.orange));
+                return;
+              }
               if (position == null) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء الضغط مطولاً على الخريطة لتحديد موقع الحاجز'), backgroundColor: Colors.orange));
                 return;
@@ -1045,7 +1063,7 @@ class _MapScreenState extends State<MapScreen>
               final newCheckpoint = Checkpoint(
                 id: '',
                 name: nameController.text.trim(),
-                region: regionController.text.trim().isEmpty ? 'عام' : regionController.text.trim(),
+                region: selectedRegion!,
                 latitude: position.latitude,
                 longitude: position.longitude,
                 createdBy: _authService.currentUser?.uid,
@@ -1066,6 +1084,7 @@ class _MapScreenState extends State<MapScreen>
             child: const Text('حفظ'),
           ),
         ],
+      ),
       ),
     );
   }
