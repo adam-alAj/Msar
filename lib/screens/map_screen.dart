@@ -435,7 +435,8 @@ class _MapScreenState extends State<MapScreen>
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _selectedTabIndex == 0
+          ? FloatingActionButton(
             heroTag: 'locationFab',
             onPressed: _onLocationFabPressed,
             backgroundColor: colorScheme.primaryContainer,
@@ -446,7 +447,8 @@ class _MapScreenState extends State<MapScreen>
                 color: colorScheme.onPrimaryContainer,
               ),
             ),
-          ),
+          )
+          : null,
     );
   }
 
