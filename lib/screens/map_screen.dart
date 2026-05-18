@@ -31,6 +31,7 @@ import '../widgets/location_permission_sheet.dart';
 import 'checkpoint_detail_screen.dart';
 import 'login_screen.dart';
 import 'settings_screen.dart';
+import 'user_profile_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({Key? key}) : super(key: key);
@@ -553,7 +554,7 @@ class _MapScreenState extends State<MapScreen>
           Row(
             children: [
               GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserProfileScreen())),
                 child: Container(
                   width: 38, height: 38,
                   decoration: BoxDecoration(
