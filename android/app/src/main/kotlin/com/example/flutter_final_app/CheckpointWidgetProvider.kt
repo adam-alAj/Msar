@@ -30,76 +30,45 @@ class CheckpointWidgetProvider : AppWidgetProvider() {
             }
             context.sendBroadcast(intent)
         }
-
-        private fun enqueueImmediateWork(context: Context) {
-            try {
-                val request = OneTimeWorkRequestBuilder<CheckpointWidgetWorker>()
-                    .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-                    .build()
-                WorkManager.getInstance(context).enqueue(request)
-            } catch (_: Exception) {}
-        }
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         for (id in appWidgetIds) {
-            try {
-                updateWidget(context, appWidgetManager, id)
-            } catch (_: Exception) {
-                // Show a safe fallback so the widget doesn't display "Can't load widget"
-                try {
-                    val fallback = RemoteViews(context.packageName, R.layout.widget_checkpoint)
-                    fallback.setViewVisibility(R.id.empty_state, View.VISIBLE)
-                    fallback.setTextViewText(R.id.empty_state, "اضغط ↻ لتحديث الحواجز القريبة")
-                    appWidgetManager.updateAppWidget(id, fallback)
-                } catch (_: Exception) {}
-            }
+            updateWidget(context, appWidgetManager, id)
         }
-
-        // If no cached data exists, trigger an immediate fetch
-        try {
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val dataJson = prefs.getString(KEY_WIDGET_DATA, null)
-            if (dataJson.isNullOrEmpty()) {
-                enqueueImmediateWork(context)
-            }
-        } catch (_: Exception) {}
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_REFRESH) {
-            enqueueImmediateWork(context)
+            // Enqueue one-time immediate work
+            val request = OneTimeWorkRequestBuilder<CheckpointWidgetWorker>()
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .build()
+            WorkManager.getInstance(context).enqueue(request)
         }
     }
 
     override fun onEnabled(context: Context) {
-        try {
-            // Schedule periodic background updates
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .setRequiresBatteryNotLow(true)
-                .build()
+        // Schedule periodic background updates when first widget is placed
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
 
-            val periodicWork = PeriodicWorkRequestBuilder<CheckpointWidgetWorker>(15, TimeUnit.MINUTES)
-                .setConstraints(constraints)
-                .build()
+        val periodicWork = PeriodicWorkRequestBuilder<CheckpointWidgetWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(constraints)
+            .build()
 
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
-                periodicWork
-            )
-        } catch (_: Exception) {}
-
-        // Also trigger an immediate one-time fetch so widget populates right away
-        enqueueImmediateWork(context)
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            periodicWork
+        )
     }
 
     override fun onDisabled(context: Context) {
-        try {
-            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
-        } catch (_: Exception) {}
+        WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
     }
 
     private fun updateWidget(context: Context, mgr: AppWidgetManager, widgetId: Int) {
@@ -111,18 +80,15 @@ class CheckpointWidgetProvider : AppWidgetProvider() {
             action = ACTION_REFRESH
         }
         val refreshPending = PendingIntent.getBroadcast(
-            context, 0, refreshIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            context, 0, refreshIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        try { views.setOnClickPendingIntent(R.id.widget_refresh, refreshPending) } catch (_: Exception) {}
+        views.setOnClickPendingIntent(R.id.widget_refresh, refreshPending)
 
         // Last update timestamp
         val lastUpdate = prefs.getLong(KEY_LAST_UPDATE, 0L)
         if (lastUpdate > 0) {
             val minutesAgo = (System.currentTimeMillis() - lastUpdate) / 60000
             views.setTextViewText(R.id.widget_timestamp, "منذ ${minutesAgo} د")
-        } else {
-            views.setTextViewText(R.id.widget_timestamp, "")
         }
 
         // Load checkpoint data from SharedPreferences (JSON array)
@@ -136,10 +102,11 @@ class CheckpointWidgetProvider : AppWidgetProvider() {
         val statusTextIds = arrayOf(R.id.status_text1, R.id.status_text2, R.id.status_text3)
 
         if (dataJson.isNullOrEmpty()) {
-            // Empty state — hide rows, show prompt
+            // Empty state
             for ((rowId, _, _) in rowIds) views.setViewVisibility(rowId, View.GONE)
             views.setViewVisibility(R.id.empty_state, View.VISIBLE)
-            try { views.setOnClickPendingIntent(R.id.empty_state, refreshPending) } catch (_: Exception) {}
+            // Tap empty state to refresh
+            views.setOnClickPendingIntent(R.id.empty_state, refreshPending)
         } else {
             views.setViewVisibility(R.id.empty_state, View.GONE)
             try {
@@ -149,50 +116,46 @@ class CheckpointWidgetProvider : AppWidgetProvider() {
                     if (i < checkpoints.length()) {
                         val cp = checkpoints.getJSONObject(i)
                         views.setViewVisibility(rowId, View.VISIBLE)
-                        views.setTextViewText(nameId, cp.optString("name", ""))
-                        views.setTextViewText(distId, cp.optString("distance", ""))
+                        views.setTextViewText(nameId, cp.getString("name"))
+                        views.setTextViewText(distId, cp.getString("distance"))
 
                         // Status color
                         val statusStr = cp.optString("status", "OPEN")
                         val statusColor = when (statusStr) {
-                            "CLOSED"  -> 0xFFE53935.toInt()
+                            "CLOSED" -> 0xFFE53935.toInt()
                             "CROWDED" -> 0xFFFFA726.toInt()
-                            else      -> 0xFF4CAF50.toInt()
+                            else -> 0xFF4CAF50.toInt()
                         }
                         val statusLabel = when (statusStr) {
-                            "CLOSED"  -> "مغلق"
+                            "CLOSED" -> "مغلق"
                             "CROWDED" -> "أزمة"
-                            else      -> "سالك"
+                            else -> "سالك"
                         }
-                        try {
-                            views.setInt(statusIds[i], "setColorFilter", statusColor)
-                        } catch (_: Exception) {}
+                        views.setInt(statusIds[i], "setColorFilter", statusColor)
                         views.setTextViewText(statusTextIds[i], statusLabel)
                         views.setTextColor(statusTextIds[i], statusColor)
 
                         // Tap row → launch app
-                        try {
-                            val launchIntent = Intent(context, MainActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                putExtra("checkpoint_lat", cp.optDouble("lat", 0.0))
-                                putExtra("checkpoint_lng", cp.optDouble("lng", 0.0))
-                                putExtra("checkpoint_id", cp.optString("id", ""))
-                            }
-                            val launchPending = PendingIntent.getActivity(
-                                context, i + 100, launchIntent,
-                                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                            )
-                            views.setOnClickPendingIntent(rowId, launchPending)
-                        } catch (_: Exception) {}
+                        val launchIntent = Intent(context, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                            putExtra("checkpoint_lat", cp.optDouble("lat", 0.0))
+                            putExtra("checkpoint_lng", cp.optDouble("lng", 0.0))
+                            putExtra("checkpoint_id", cp.optString("id", ""))
+                        }
+                        val launchPending = PendingIntent.getActivity(
+                            context, i + 100, launchIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        )
+                        views.setOnClickPendingIntent(rowId, launchPending)
                     } else {
                         views.setViewVisibility(rowId, View.GONE)
                     }
                 }
-            } catch (_: Exception) {
-                // JSON parse error → fall back to empty state
+            } catch (e: Exception) {
+                // If JSON parsing fails, show empty state
                 for ((rowId, _, _) in rowIds) views.setViewVisibility(rowId, View.GONE)
                 views.setViewVisibility(R.id.empty_state, View.VISIBLE)
-                try { views.setOnClickPendingIntent(R.id.empty_state, refreshPending) } catch (_: Exception) {}
+                views.setOnClickPendingIntent(R.id.empty_state, refreshPending)
             }
         }
 
