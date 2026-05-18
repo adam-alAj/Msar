@@ -31,6 +31,7 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
   late Stream<CheckpointStatus> _statusStream;
   late AnimationController _pulseController;
   final GlobalKey<CommentsSectionState> _commentsKey = GlobalKey<CommentsSectionState>();
+  bool _isAdmin = false;
 
   @override
   void initState() {
@@ -40,6 +41,12 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+    _checkAdmin();
+  }
+
+  void _checkAdmin() async {
+    final admin = await _authService.isAdmin();
+    if (mounted) setState(() => _isAdmin = admin);
   }
 
   @override
@@ -206,6 +213,11 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
               ],
             ),
           ),
+          // Admin override section
+          if (_isAdmin) ...[
+            const SizedBox(height: 20),
+            _buildAdminOverrideSection(colorScheme),
+          ],
           const SizedBox(height: 20),
           // Info section
           _buildInfoSection(colorScheme),
@@ -342,6 +354,90 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
         ],
       ),
     );
+  }
+
+  // ─── ADMIN OVERRIDE ──────────────────────────────────────────────────────
+
+  Widget _buildAdminOverrideSection(ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.withOpacity(0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(Icons.admin_panel_settings, size: 18, color: Colors.orange.shade700),
+            const SizedBox(width: 6),
+            Text('تحكم المسؤول', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.orange.shade700)),
+          ]),
+          const SizedBox(height: 12),
+          // Entrance override
+          _buildOverrideRow('داخل', 'ENTRANCE', colorScheme),
+          const SizedBox(height: 8),
+          // Exit override
+          _buildOverrideRow('طالع', 'EXIT', colorScheme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverrideRow(String label, String direction, ColorScheme colorScheme) {
+    return Row(
+      children: [
+        SizedBox(width: 40, child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.onSurface))),
+        const SizedBox(width: 8),
+        _buildStatusChip('سالك', 'OPEN', direction, const Color(0xFF4CAF50)),
+        const SizedBox(width: 6),
+        _buildStatusChip('أزمة', 'CROWDED', direction, const Color(0xFFFFA726)),
+        const SizedBox(width: 6),
+        _buildStatusChip('مغلق', 'CLOSED', direction, const Color(0xFFE53935)),
+      ],
+    );
+  }
+
+  Widget _buildStatusChip(String label, String status, String direction, Color color) {
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => _overrideStatus(direction, status),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withOpacity(0.5)),
+          ),
+          child: Center(child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color))),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _overrideStatus(String direction, String status) async {
+    try {
+      await _checkpointService.overrideStatus(widget.checkpoint.id, direction, status);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('✓ تم تحديث الحالة بنجاح'),
+          backgroundColor: Colors.green.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('❌ فشل التحديث: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+    }
   }
 
   // ─── INFO SECTION ───────────────────────────────────────────────────────────

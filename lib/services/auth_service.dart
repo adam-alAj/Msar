@@ -115,17 +115,20 @@ class AuthService {
 
   // ================= SHARED =================
   Future<void> _saveUserToFirestore(UserCredential userCredential) async {
-    await _firestore
-        .collection('users')
-        .doc(userCredential.user!.uid)
-        .set({
+    final docRef = _firestore.collection('users').doc(userCredential.user!.uid);
+    final doc = await docRef.get();
+    final data = <String, dynamic>{
       'email': userCredential.user!.email,
       'name': userCredential.user!.displayName,
       'photoUrl': userCredential.user!.photoURL,
       'phone': userCredential.user!.phoneNumber,
-      'isAdmin': false,
       'lastLogin': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    };
+    // Only set isAdmin to false for new users
+    if (!doc.exists) {
+      data['isAdmin'] = false;
+    }
+    await docRef.set(data, SetOptions(merge: true));
   }
 
   Future<bool> isAdmin() async {
