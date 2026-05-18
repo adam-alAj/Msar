@@ -541,22 +541,30 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Widget _buildModernAppBar(ColorScheme colorScheme, bool isDark) {
+    final user = _authService.currentUser;
+    final userName = user?.displayName ?? user?.phoneNumber ?? 'مسار';
+    final photoUrl = user?.photoURL;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Column(
         children: [
-          // Top row: app name + actions
+          // Top row: user avatar + name + actions
           Row(
             children: [
               GestureDetector(
-                onTap: _openDrawer,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
                 child: Container(
                   width: 38, height: 38,
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(11),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: colorScheme.primary.withOpacity(0.3), width: 2),
                   ),
-                  child: Icon(AppIcons.location, size: 18, color: colorScheme.primary),
+                  child: ClipOval(
+                    child: photoUrl != null
+                        ? Image.network(photoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.person, size: 20, color: colorScheme.primary))
+                        : Icon(Icons.person, size: 20, color: colorScheme.primary),
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -565,7 +573,7 @@ class _MapScreenState extends State<MapScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('مسار', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: colorScheme.onSurface, letterSpacing: -0.3)),
+                    Text(userName, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: colorScheme.onSurface, letterSpacing: -0.3), maxLines: 1, overflow: TextOverflow.ellipsis),
                     if (_isLoadingStatuses)
                       Row(children: [
                         SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 1.5, valueColor: AlwaysStoppedAnimation(colorScheme.primary))),
@@ -588,14 +596,32 @@ class _MapScreenState extends State<MapScreen>
             ],
           ),
           const SizedBox(height: 10),
-          // Search bar
-          CheckpointSearchBar(
-            mode: _selectedTabIndex == 0 ? SearchMode.map : SearchMode.list,
-            checkpoints: _allCheckpoints,
-            statuses: _statuses,
-            onChanged: (query) => setState(() => _searchQuery = query),
-            onCheckpointSelected: _onSearchCheckpointSelected,
-            onClear: () => setState(() => _searchQuery = ''),
+          // Search bar + location filter
+          Row(
+            children: [
+              Expanded(
+                child: CheckpointSearchBar(
+                  mode: _selectedTabIndex == 0 ? SearchMode.map : SearchMode.list,
+                  checkpoints: _allCheckpoints,
+                  statuses: _statuses,
+                  onChanged: (query) => setState(() => _searchQuery = query),
+                  onCheckpointSelected: _onSearchCheckpointSelected,
+                  onClear: () => setState(() => _searchQuery = ''),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _openDrawer,
+                child: Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(AppIcons.location, size: 18, color: colorScheme.primary),
+                ),
+              ),
+            ],
           ),
         ],
       ),
