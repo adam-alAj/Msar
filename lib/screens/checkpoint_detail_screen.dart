@@ -170,6 +170,20 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
               );
             },
           ),
+          if (_isAdmin) ...[
+            const SizedBox(width: 8),
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: colorScheme.onSurfaceVariant),
+              onSelected: (value) {
+                if (value == 'edit') _showEditCheckpointDialog();
+                if (value == 'delete') _showDeleteConfirmation();
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('تعديل الحاجز')])),
+                const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.red), SizedBox(width: 8), Text('حذف الحاجز', style: TextStyle(color: Colors.red))])),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -557,6 +571,91 @@ class _CheckpointDetailScreenState extends State<CheckpointDetailScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
     }
+  }
+
+  // ─── ADMIN EDIT/DELETE ────────────────────────────────────────────────────
+
+  void _showEditCheckpointDialog() {
+    final nameController = TextEditingController(text: widget.checkpoint.name);
+    final regionController = TextEditingController(text: widget.checkpoint.region);
+    final latController = TextEditingController(text: widget.checkpoint.latitude.toString());
+    final lngController = TextEditingController(text: widget.checkpoint.longitude.toString());
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تعديل الحاجز', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الحاجز', border: OutlineInputBorder()), textDirection: TextDirection.rtl),
+            const SizedBox(height: 12),
+            TextField(controller: regionController, decoration: const InputDecoration(labelText: 'المنطقة', border: OutlineInputBorder()), textDirection: TextDirection.rtl),
+            const SizedBox(height: 12),
+            TextField(controller: latController, decoration: const InputDecoration(labelText: 'خط العرض', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+            const SizedBox(height: 12),
+            TextField(controller: lngController, decoration: const InputDecoration(labelText: 'خط الطول', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          ElevatedButton(
+            onPressed: () async {
+              final updated = Checkpoint(
+                id: widget.checkpoint.id,
+                name: nameController.text.trim(),
+                region: regionController.text.trim(),
+                latitude: double.tryParse(latController.text) ?? widget.checkpoint.latitude,
+                longitude: double.tryParse(lngController.text) ?? widget.checkpoint.longitude,
+                createdBy: widget.checkpoint.createdBy,
+                createdAt: widget.checkpoint.createdAt,
+              );
+              try {
+                await _checkpointService.updateCheckpoint(updated);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ تم تعديل الحاجز بنجاح'), backgroundColor: Colors.green));
+                }
+              } catch (e) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ فشل التعديل: $e'), backgroundColor: Colors.red));
+              }
+            },
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('حذف الحاجز', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+        content: Text('هل أنت متأكد من حذف "${widget.checkpoint.name}"؟ لا يمكن التراجع عن هذا الإجراء.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              try {
+                await _checkpointService.deleteCheckpoint(widget.checkpoint.id);
+                if (mounted) {
+                  Navigator.pop(context); // close dialog
+                  Navigator.pop(context); // go back to map
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ تم حذف الحاجز'), backgroundColor: Colors.green));
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ فشل الحذف: $e'), backgroundColor: Colors.red));
+                }
+              }
+            },
+            child: const Text('حذف', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatTimeAgo(DateTime dateTime) {

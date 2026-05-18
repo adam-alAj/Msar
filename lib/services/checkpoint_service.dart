@@ -31,6 +31,20 @@ class CheckpointService {
         .add(checkpoint.toFirestore());
   }
 
+  Future<void> updateCheckpoint(Checkpoint checkpoint) async {
+    await _firestore
+        .collection(AppConstants.checkpointsCollection)
+        .doc(checkpoint.id)
+        .update(checkpoint.toFirestore());
+  }
+
+  Future<void> deleteCheckpoint(String checkpointId) async {
+    await _firestore
+        .collection(AppConstants.checkpointsCollection)
+        .doc(checkpointId)
+        .delete();
+  }
+
   // ─── Votes ───────────────────────────────────────────────────────────────────
 
   Future<void> submitVote(Vote vote) async {
